@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH Advanced Monitor - Dashboard Completo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+        
+        .stat-number {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-success {
+            color: #4ecdc4;
+        }
+        
+        .stat-danger {
+            color: #ff6b6b;
+        }
+        
+        .stat-warning {
+            color: #ffa726;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .triple-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .panel h2 {
+            margin-bottom: 20px;
+            color: #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .content-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .list-item {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        
+        .attack-item {
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .success-item {
+            border-left: 4px solid #4ecdc4;
+        }
+        
+        .active-item {
+            border-left: 4px solid #ffa726;
+        }
+        
+        .banned-item {
+            border-left: 4px solid #9c27b0;
+        }
+        
+        .item-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .item-details {
+            opacity: 0.8;
+            font-size: 0.85em;
+        }
+        
+        .map-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-height: 500px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background: #4ecdc4;
+            box-shadow: 0 0 10px #4ecdc4;
+        }
+        
+        .status-offline {
+            background: #ff6b6b;
+            box-shadow: 0 0 10px #ff6b6b;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .protection-status {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .protection-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        @media (max-width: 1200px) {
+            .triple-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ SSH Advanced Security Monitor</h1>
+            <p>Monitoreo completo de seguridad SSH en tiempo real</p>
+            <button class="refresh-btn" onclick="refreshAll()">🔄 Actualizar Todo</button>
+            <button class="refresh-btn" onclick="toggleAutoRefresh()">⏱️ Auto-refresh: <span id="auto-status">ON</span></button>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>🚨 Ataques (24h)</h3>
+                <div class="stat-number stat-danger" id="attack-count">0</div>
+                <p>Intentos fallidos</p>
+            </div>
+            
+            <div class="stat-card">
+                <h3>✅ Conexiones Exitosas</h3>
+                <div class="stat-number stat-success" id="success-count">0</div>
+                <p>Últimas 24 horas</p>
+            </div>
+            
+            <div class="stat-card">
+                <h3>👥 Sesiones Activas</h3>
+                <div class="stat-number stat-warning" id="active-count">0</div>
+                <p>Conexiones actuales</p>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🔒 IPs Bloqueadas</h3>
+                <div class="stat-number stat-danger" id="banned-count">0</div>
+                <p>Por fail2ban</p>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🌍 IPs Únicas</h3>
+                <div class="stat-number" id="unique-ips">0</div>
+                <p>Atacantes únicos</p>
+            </div>
+            
+            <div class="stat-card">
+                <h3>⚡ Estado del Sistema</h3>
+                <div>
+                    <span class="status-indicator status-online"></span>
+                    SSH Activo
+                </div>
+                <div>
+                    <span class="status-indicator status-online"></span>
+                    Fail2ban Activo
+                </div>
+            </div>
+        </div>
+        
+        <div class="triple-content">
+            <div class="panel">
+                <h2>🚨 Ataques Recientes</h2>
+                <div class="content-list" id="attack-list">
+                    <p>Cargando ataques...</p>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>✅ Conexiones Exitosas</h2>
+                <div class="content-list" id="success-list">
+                    <p>Cargando conexiones...</p>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>👥 Sesiones Activas</h2>
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('users')">Usuarios</button>
+                    <button class="tab" onclick="switchTab('connections')">Conexiones</button>
+                </div>
+                <div class="tab-content active" id="users-tab">
+                    <div class="content-list" id="active-users">
+                        <p>Cargando usuarios...</p>
+                    </div>
+                </div>
+                <div class="tab-content" id="connections-tab">
+                    <div class="content-list" id="active-connections">
+                        <p>Cargando conexiones...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="panel">
+                <h2>🔒 IPs Bloqueadas por Fail2ban</h2>
+                <div class="content-list" id="banned-list">
+                    <p>Cargando lista de bloqueados...</p>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>🛡️ Estado de Protección</h2>
+                <div class="protection-status">
+                    <div class="protection-item">
+                        <h4>🔥 Firewall Status</h4>
+                        <p><span class="status-indicator status-online"></span>Activo</p>
+                    </div>
+                    <div class="protection-item">
+                        <h4>🚫 Fail2ban Jail</h4>
+                        <p id="jail-status"><span class="status-indicator status-online"></span>Activo</p>
+                    </div>
+                    <div class="protection-item">
+                        <h4>📊 IPs Baneadas</h4>
+                        <p id="banned-count-detail">0</p>
+                    </div>
+                    <div class="protection-item">
+                        <h4>🕐 Última Actualización</h4>
+                        <p id="last-update">Ahora</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <h2>🌍 Mapa Mundial - Ataques vs Conexiones Legítimas</h2>
+            <p style="margin-bottom: 15px;">
+                🔴 Círculos rojos = Ataques | 🟢 Círculos verdes = Conexiones exitosas | 🔵 Círculos azules = Tu VPN/IP Confiable
+            </p>
+            <div id="attack-map">
+                <p>Cargando mapa...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+        let autoRefresh = true;
+        
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const status = document.getElementById('auto-status');
+            status.textContent = autoRefresh ? 'ON' : 'OFF';
+            
+            if (autoRefresh) {
+                startAutoRefresh();
+            } else {
+                clearInterval(refreshInterval);
+            }
+        }
+        
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(refreshAll, 15000);
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+        
+        function refreshAll() {
+            loadSummary();
+            loadAttacks();
+            loadSuccessful();
+            loadActive();
+            loadFail2banStatus();
+            loadMap();
+            updateTimestamp();
+        }
+        
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString();
+        }
+        
+        function loadSummary() {
+            fetch('/api/summary')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('attack-count').textContent = data.total_attacks_24h || 0;
+                    document.getElementById('success-count').textContent = data.total_successful_24h || 0;
+                    document.getElementById('active-count').textContent = data.active_sessions || 0;
+                    document.getElementById('banned-count').textContent = data.banned_ips || 0;
+                    document.getElementById('unique-ips').textContent = data.unique_attack_ips || 0;
+                })
+                .catch(error => console.error('Error loading summary:', error));
+        }
+        
+        function loadAttacks() {
+            fetch('/api/attacks')
+                .then(response => response.json())
+                .then(data => {
+                    const attackList = document.getElementById('attack-list');
+                    
+                    if (data.length === 0) {
+                        attackList.innerHTML = '<p>No hay ataques recientes</p>';
+                        return;
+                    }
+                    
+                    attackList.innerHTML = data.slice(0, 30).map(attack => `
+                        <div class="list-item attack-item">
+                            <div class="item-header">🔴 ${attack.ip}</div>
+                            <div class="item-details">
+                                👤 ${attack.user} | 🕐 ${attack.timestamp}<br>
+                                🌍 ${attack.country}
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading attacks:', error);
+                    document.getElementById('attack-list').innerHTML = '<p>Error cargando ataques</p>';
+                });
+        }
+        
+        function loadSuccessful() {
+            fetch('/api/successful')
+                .then(response => response.json())
+                .then(data => {
+                    const successList = document.getElementById('success-list');
+                    
+                    if (data.length === 0) {
+                        successList.innerHTML = '<p>No hay conexiones exitosas recientes</p>';
+                        return;
+                    }
+                    
+                    successList.innerHTML = data.slice(0, 30).map(conn => `
+                        <div class="list-item success-item">
+                            <div class="item-header">${conn.is_trusted ? '🔐' : '✅'} ${conn.ip}</div>
+                            <div class="item-details">
+                                👤 ${conn.user} | 🔑 ${conn.auth_type}<br>
+                                🕐 ${conn.timestamp} | 🌍 ${conn.country}
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error loading successful connections:', error);
+                    document.getElementById('success-list').innerHTML = '<p>Error cargando conexiones</p>';
+                });
+        }
+        
+        function loadActive() {
+            fetch('/api/active')
+                .then(response => response.json())
+                .then(data => {
+                    const activeUsers = document.getElementById('active-users');
+                    const activeConnections = document.getElementById('active-connections');
+                    
+                    // Usuarios activos
+                    if (data.user_sessions && data.user_sessions.length > 0) {
+                        activeUsers.innerHTML = data.user_sessions.map(session => `
+                            <div class="list-item active-item">
+                                <div class="item-header">👤 ${session.user}@${session.terminal}</div>
+                                <div class="item-details">
+                                    🕐 ${session.login_time}<br>
+                                    🌐 ${session.ip} | 🌍 ${session.country}
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        activeUsers.innerHTML = '<p>No hay usuarios conectados por terminal</p>';
+                    }
+                    
+                    // Conexiones de red activas
+                    if (data.network_connections && data.network_connections.length > 0) {
+                        activeConnections.innerHTML = data.network_connections.map(conn => `
+                            <div class="list-item active-item">
+                                <div class="item-header">${conn.is_trusted ? '🔐' : '🔗'} ${conn.remote_ip}:${conn.remote_port}</div>
+                                <div class="item-details">
+                                    📡 Puerto local: ${conn.local_port}<br>
+                                    🌍 ${conn.country} | ⏱️ ${conn.connection_time}
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        activeConnections.innerHTML = '<p>No hay conexiones de red SSH activas detectadas</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading active sessions:', error);
+                    document.getElementById('active-users').innerHTML = '<p>Error cargando sesiones</p>';
+                    document.getElementById('active-connections').innerHTML = '<p>Error cargando conexiones</p>';
+                });
+        }
+        
+        function loadFail2banStatus() {
+            fetch('/api/fail2ban')
+                .then(response => response.json())
+                .then(data => {
+                    const bannedList = document.getElementById('banned-list');
+                    const bannedCountDetail = document.getElementById('banned-count-detail');
+                    const jailStatus = document.getElementById('jail-status');
+                    
+                    // Lista de IPs bloqueadas
+                    if (data.banned_ips && data.banned_ips.length > 0) {
+                        bannedList.innerHTML = data.banned_ips.map(banned => `
+                            <div class="list-item banned-item">
+                                <div class="item-header">🚫 ${banned.ip}</div>
+                                <div class="item-details">🌍 ${banned.country}</div>
+                            </div>
+                        `).join('');
+                        bannedCountDetail.textContent = data.banned_ips.length;
+                    } else {
+                        bannedList.innerHTML = '<p>✅ No hay IPs bloqueadas actualmente</p>';
+                        bannedCountDetail.textContent = '0';
+                    }
+                    
+                    // Estado del jail
+                    if (data.stats && data.stats.jail_status) {
+                        jailStatus.innerHTML = `<span class="status-indicator status-online"></span>${data.stats.jail_status}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading fail2ban status:', error);
+                    document.getElementById('banned-list').innerHTML = '<p>Error cargando fail2ban</p>';
+                });
+        }
+        
+        function loadMap() {
+            fetch('/api/map')
+                .then(response => response.json())
+                .then(data => {
+                    const mapContainer = document.getElementById('attack-map');
+                    if (data.map_html) {
+                        mapContainer.innerHTML = data.map_html;
+                    } else {
+                        mapContainer.innerHTML = '<p>Error cargando mapa</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading map:', error);
+                    document.getElementById('attack-map').innerHTML = '<p>Error cargando mapa</p>';
+                });
+        }
+        
+        // Cargar datos iniciales
+        refreshAll();
+        
+        // Iniciar auto-refresh
+        startAutoRefresh();
+        
+        // Limpiar interval cuando se cierre la página
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

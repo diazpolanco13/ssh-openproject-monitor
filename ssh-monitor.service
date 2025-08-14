@@ -1,0 +1,14 @@
+[Unit]
+Description=SSH + OpenProject Monitor Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ssh-monitor
+ExecStart=/opt/ssh-monitor/venv/bin/python /opt/ssh-monitor/ssh_openproject_monitor.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

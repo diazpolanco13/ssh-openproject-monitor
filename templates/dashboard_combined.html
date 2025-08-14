@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor SSH + OpenProject</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .dashboard {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .ssh { color: #4CAF50; }
+        .attack { color: #f44336; }
+        .openproject { color: #FF9800; }
+        .active { color: #2196F3; }
+        .warning { color: #FFC107; }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .section h2 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+        
+        .map-container {
+            grid-column: 1 / -1;
+            height: 600px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        th {
+            background: rgba(0,0,0,0.3);
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .ip-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .trusted { background: rgba(76, 175, 80, 0.3); }
+        .untrusted { background: rgba(244, 67, 54, 0.3); }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .success { background: rgba(76, 175, 80, 0.8); }
+        .error { background: rgba(244, 67, 54, 0.8); }
+        .info { background: rgba(33, 150, 243, 0.8); }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            opacity: 0.7;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 5px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background: rgba(255,255,255,0.2);
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ Monitor SSH + OpenProject</h1>
+        <p>Monitoreo en tiempo real de seguridad y conexiones</p>
+    </div>
+    
+    <div class="dashboard">
+        <!-- Estadísticas principales -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value attack" id="ssh-attacks">-</div>
+                <div class="stat-label">Ataques SSH 24h</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value ssh" id="ssh-successful">-</div>
+                <div class="stat-label">SSH Exitosos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value openproject" id="op-requests">-</div>
+                <div class="stat-label">Peticiones OpenProject</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value active" id="op-active-users">-</div>
+                <div class="stat-label">Usuarios OP Activos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value active" id="total-connections">-</div>
+                <div class="stat-label">Conexiones Activas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value warning" id="banned-ips">-</div>
+                <div class="stat-label">IPs Bloqueadas</div>
+            </div>
+        </div>
+        
+        <!-- Mapa mundial -->
+        <div class="section map-container">
+            <div id="world-map" class="loading">🌍 Cargando mapa mundial...</div>
+        </div>
+        
+        <!-- Contenido en dos columnas -->
+        <div class="content-grid">
+            <!-- Sección SSH -->
+            <div class="section">
+                <h2>🔐 Actividad SSH</h2>
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('ssh-attacks-tab')">Ataques</div>
+                    <div class="tab" onclick="showTab('ssh-success-tab')">Exitosos</div>
+                    <div class="tab" onclick="showTab('ssh-active-tab')">Activos</div>
+                </div>
+                
+                <div id="ssh-attacks-tab" class="tab-content active">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Usuario</th>
+                                    <th>País</th>
+                                    <th>Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ssh-attacks-table">
+                                <tr><td colspan="4" class="loading">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="ssh-success-tab" class="tab-content">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Usuario</th>
+                                    <th>Tipo</th>
+                                    <th>País</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ssh-success-table">
+                                <tr><td colspan="4" class="loading">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="ssh-active-tab" class="tab-content">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Usuario/Puerto</th>
+                                    <th>País</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ssh-active-table">
+                                <tr><td colspan="4" class="loading">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sección OpenProject -->
+            <div class="section">
+                <h2>📊 OpenProject</h2>
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('op-access-tab')">Accesos</div>
+                    <div class="tab" onclick="showTab('op-users-tab')">Usuarios</div>
+                    <div class="tab" onclick="showTab('op-connections-tab')">Conexiones</div>
+                </div>
+                
+                <div id="op-access-tab" class="tab-content active">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Usuario</th>
+                                    <th>Método</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="op-access-table">
+                                <tr><td colspan="4" class="loading">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="op-users-tab" class="tab-content">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Usuario</th>
+                                    <th>IP</th>
+                                    <th>Peticiones</th>
+                                    <th>País</th>
+                                </tr>
+                            </thead>
+                            <tbody id="op-users-table">
+                                <tr><td colspan="4" class="loading">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="op-connections-tab" class="tab-content">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Protocolo</th>
+                                    <th>Puerto</th>
+                                    <th>País</th>
+                                </tr>
+                            </thead>
+                            <tbody id="op-connections-table">
+                                <tr><td colspan="4" class="loading">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Función para mostrar tabs
+        function showTab(tabId) {
+            // Obtener el contenedor padre del tab clickeado
+            const parentSection = event.target.closest('.section');
+            
+            // Ocultar todos los tab-content de esta sección
+            parentSection.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remover active de todos los tabs de esta sección
+            parentSection.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostrar el tab seleccionado
+            document.getElementById(tabId).classList.add('active');
+            
+            // Marcar el tab como activo
+            event.target.classList.add('active');
+        }
+        
+        // Función para actualizar estadísticas
+        function updateStats() {
+            fetch('/api/summary')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('ssh-attacks').textContent = data.ssh_attacks_24h || 0;
+                    document.getElementById('ssh-successful').textContent = data.ssh_successful_24h || 0;
+                    document.getElementById('op-requests').textContent = data.op_requests_24h || 0;
+                    document.getElementById('op-active-users').textContent = data.op_active_users || 0;
+                    document.getElementById('total-connections').textContent = data.total_active_connections || 0;
+                    document.getElementById('banned-ips').textContent = data.ssh_banned_ips || 0;
+                })
+                .catch(error => console.log('Error actualizando estadísticas:', error));
+        }
+        
+        // Función para actualizar mapa
+        function updateMap() {
+            fetch('/api/map')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('world-map').innerHTML = data.map_html;
+                })
+                .catch(error => {
+                    document.getElementById('world-map').innerHTML = '<p>Error cargando mapa</p>';
+                });
+        }
+        
+        // Función para actualizar ataques SSH
+        function updateSSHAttacks() {
+            fetch('/api/ssh/attacks')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('ssh-attacks-table');
+                    tbody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">No hay ataques recientes</td></tr>';
+                        return;
+                    }
+                    
+                    data.slice(-20).reverse().forEach(attack => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><span class="ip-badge untrusted">${attack.ip}</span></td>
+                            <td>${attack.user}</td>
+                            <td>${attack.country}</td>
+                            <td>${attack.timestamp}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.log('Error actualizando ataques SSH:', error));
+        }
+        
+        // Función para actualizar conexiones SSH exitosas
+        function updateSSHSuccessful() {
+            fetch('/api/ssh/successful')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('ssh-success-table');
+                    tbody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">No hay conexiones exitosas recientes</td></tr>';
+                        return;
+                    }
+                    
+                    data.slice(-10).reverse().forEach(conn => {
+                        const badgeClass = conn.is_trusted ? 'trusted' : 'untrusted';
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><span class="ip-badge ${badgeClass}">${conn.ip}</span></td>
+                            <td>${conn.user}</td>
+                            <td><span class="status-badge info">${conn.auth_type}</span></td>
+                            <td>${conn.country}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.log('Error actualizando SSH exitosos:', error));
+        }
+        
+        // Función para actualizar sesiones SSH activas
+        function updateSSHActive() {
+            fetch('/api/ssh/active')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('ssh-active-table');
+                    tbody.innerHTML = '';
+                    
+                    let hasData = false;
+                    
+                    // Sesiones de usuario
+                    if (data.user_sessions && data.user_sessions.length > 0) {
+                        data.user_sessions.forEach(session => {
+                            const badgeClass = session.is_trusted ? 'trusted' : 'untrusted';
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td><span class="ip-badge ${badgeClass}">${session.ip}</span></td>
+                                <td>${session.user}</td>
+                                <td>${session.country}</td>
+                                <td><span class="status-badge success">Usuario</span></td>
+                            `;
+                            tbody.appendChild(row);
+                            hasData = true;
+                        });
+                    }
+                    
+                    // Conexiones de red
+                    if (data.network_connections && data.network_connections.length > 0) {
+                        data.network_connections.forEach(conn => {
+                            const badgeClass = conn.is_trusted ? 'trusted' : 'untrusted';
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td><span class="ip-badge ${badgeClass}">${conn.remote_ip}</span></td>
+                                <td>Puerto ${conn.remote_port}</td>
+                                <td>${conn.country}</td>
+                                <td><span class="status-badge info">Conectado</span></td>
+                            `;
+                            tbody.appendChild(row);
+                            hasData = true;
+                        });
+                    }
+                    
+                    if (!hasData) {
+                        tbody.innerHTML = '<tr><td colspan="4">No hay sesiones SSH activas</td></tr>';
+                    }
+                })
+                .catch(error => console.log('Error actualizando SSH activos:', error));
+        }
+        
+        // Función para actualizar accesos OpenProject
+        function updateOPAccess() {
+            fetch('/api/openproject/access')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('op-access-table');
+                    tbody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">No hay accesos recientes a OpenProject</td></tr>';
+                        return;
+                    }
+                    
+                    data.slice(-20).reverse().forEach(access => {
+                        const badgeClass = access.is_trusted ? 'trusted' : 'untrusted';
+                        const statusClass = access.status < 400 ? 'success' : 'error';
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><span class="ip-badge ${badgeClass}">${access.ip}</span></td>
+                            <td>${access.user_id === 'anonymous' ? 'Anónimo' : 'User ' + access.user_id}</td>
+                            <td>${access.method}</td>
+                            <td><span class="status-badge ${statusClass}">${access.status}</span></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.log('Error actualizando accesos OpenProject:', error));
+        }
+        
+        // Función para actualizar usuarios OpenProject
+        function updateOPUsers() {
+            fetch('/api/openproject/users')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('op-users-table');
+                    tbody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">No hay usuarios activos en OpenProject</td></tr>';
+                        return;
+                    }
+                    
+                    data.forEach(user => {
+                        const badgeClass = user.is_trusted ? 'trusted' : 'untrusted';
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>User ${user.user_id}</td>
+                            <td><span class="ip-badge ${badgeClass}">${user.ip}</span></td>
+                            <td>${user.requests}</td>
+                            <td>${user.country}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.log('Error actualizando usuarios OpenProject:', error));
+        }
+        
+        // Función para actualizar conexiones OpenProject
+        function updateOPConnections() {
+            fetch('/api/openproject/connections')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('op-connections-table');
+                    tbody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">No hay conexiones activas a OpenProject</td></tr>';
+                        return;
+                    }
+                    
+                    data.forEach(conn => {
+                        const badgeClass = conn.is_trusted ? 'trusted' : 'untrusted';
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><span class="ip-badge ${badgeClass}">${conn.remote_ip}</span></td>
+                            <td>${conn.protocol}</td>
+                            <td>${conn.remote_port}</td>
+                            <td>${conn.country}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.log('Error actualizando conexiones OpenProject:', error));
+        }
+        
+        // Función para actualizar todo
+        function updateAll() {
+            updateStats();
+            updateMap();
+            updateSSHAttacks();
+            updateSSHSuccessful();
+            updateSSHActive();
+            updateOPAccess();
+            updateOPUsers();
+            updateOPConnections();
+        }
+        
+        // Cargar datos al inicio
+        updateAll();
+        
+        // Actualizar cada 10 segundos
+        setInterval(updateAll, 10000);
+    </script>
+</body>
+</html>

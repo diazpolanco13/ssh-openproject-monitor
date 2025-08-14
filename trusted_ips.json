@@ -1,0 +1,27 @@
+{
+    "ips": [
+        "142.111.25.137",
+        "192.168.1.1",
+        "127.0.0.1",
+        "localhost"
+    ],
+    "trusted_ips": [
+        {
+            "ip": "142.111.25.137",
+            "description": "VPN Fija Personal",
+            "location": "VPN Server",
+            "user": "root",
+            "device": "Conexión Principal"
+        },
+        {
+            "ip": "192.168.1.0/24",
+            "description": "Red local",
+            "location": "Local Network"
+        }
+    ],
+    "computer_names": {
+        "142.111.25.137": "🔐 VPN Personal",
+        "localhost": "🏠 Local",
+        "127.0.0.1": "🏠 Local"
+    }
+}
