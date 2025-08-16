@@ -377,6 +377,261 @@ def get_fail2ban_status():
         logging.error(f"Error getting fail2ban status: {e}")
         return {'banned_ips': [], 'stats': {'jail_status': 'Error', 'total_banned': 0}}
 
+def get_openproject_users_from_db():
+    """Get real user names from OpenProject database"""
+    try:
+        cmd = 'docker exec op_db psql -U postgres -d openproject -t -c "SELECT id, login, firstname, lastname, mail, status, last_login_on FROM users WHERE status = 1;"'
+        output = run_command(cmd)
+        
+        users = {}
+        for line in output.split('\n'):
+            if line.strip() and '|' in line:
+                parts = [p.strip() for p in line.split('|')]
+                if len(parts) >= 7:
+                    try:
+                        user_id = int(parts[0])
+                        login = parts[1] if parts[1] else f"user_{user_id}"
+                        firstname = parts[2] if parts[2] else ""
+                        lastname = parts[3] if parts[3] else ""
+                        email = parts[4] if parts[4] else ""
+                        last_login = parts[6] if parts[6] else None
+                        
+                        # Create display name
+                        if firstname and lastname:
+                            display_name = f"{firstname} {lastname}"
+                        elif login:
+                            display_name = login
+                        else:
+                            display_name = f"User {user_id}"
+                        
+                        users[user_id] = {
+                            'id': user_id,
+                            'login': login,
+                            'display_name': display_name,
+                            'email': email,
+                            'last_login': last_login
+                        }
+                    except (ValueError, IndexError):
+                        continue
+        
+        logging.info(f"OpenProject users loaded: {len(users)} users")
+        return users
+        
+    except Exception as e:
+        logging.error(f"Error getting OpenProject users from DB: {e}")
+        return {}
+
+def get_openproject_failed_logins(hours=24):
+    """Get OpenProject failed login attempts from logs"""
+    try:
+        since_time = datetime.now() - timedelta(hours=hours)
+        since_hours = f"{hours}h"
+        
+        cmd = f"docker logs openproject --since={since_hours} | grep 'Failed login'"
+        output = run_command(cmd)
+        
+        failed_logins = []
+        for line in output.split('\n'):
+            if line.strip() and 'Failed login' in line:
+                # Parse: Failed login for 'username' from IP at timestamp
+                try:
+                    user_match = re.search(r"Failed login for '([^']+)'", line)
+                    ip_match = re.search(r'from (\d+\.\d+\.\d+\.\d+)', line)
+                    time_match = re.search(r'at ([0-9-]+ [0-9:]+)', line)
+                    
+                    if user_match and ip_match:
+                        username = user_match.group(1)
+                        ip = ip_match.group(1)
+                        timestamp = time_match.group(1) if time_match else 'unknown'
+                        
+                        geo_info = get_geo_info(ip)
+                        
+                        failed_logins.append({
+                            'username': username,
+                            'ip': ip,
+                            'timestamp': timestamp,
+                            'country': geo_info['country'],
+                            'service': 'OpenProject'
+                        })
+                except Exception as e:
+                    logging.error(f"Error parsing failed login line: {e}")
+                    continue
+        
+        logging.info(f"OpenProject failed logins: {len(failed_logins)} attempts")
+        return failed_logins
+        
+    except Exception as e:
+        logging.error(f"Error getting OpenProject failed logins: {e}")
+        return []
+
+def get_openproject_successful_logins(hours=24):
+    """Get OpenProject successful logins from database"""
+    try:
+        since_time = datetime.now() - timedelta(hours=hours)
+        since_str = since_time.strftime('%Y-%m-%d %H:%M:%S')
+        
+        cmd = f'docker exec op_db psql -U postgres -d openproject -t -c "SELECT id, login, firstname, lastname, last_login_on FROM users WHERE status = 1 AND last_login_on >= \'{since_str}\';"'
+        output = run_command(cmd)
+        
+        successful_logins = []
+        for line in output.split('\n'):
+            if line.strip() and '|' in line:
+                parts = [p.strip() for p in line.split('|')]
+                if len(parts) >= 5:
+                    try:
+                        user_id = int(parts[0])
+                        login = parts[1] if parts[1] else f"user_{user_id}"
+                        firstname = parts[2] if parts[2] else ""
+                        lastname = parts[3] if parts[3] else ""
+                        last_login = parts[4] if parts[4] else ""
+                        
+                        # Create display name
+                        if firstname and lastname:
+                            display_name = f"{firstname} {lastname}"
+                        elif login:
+                            display_name = login
+                        else:
+                            display_name = f"User {user_id}"
+                        
+                        successful_logins.append({
+                            'user_id': user_id,
+                            'username': display_name,
+                            'login': login,
+                            'last_login': last_login,
+                            'service': 'OpenProject'
+                        })
+                    except (ValueError, IndexError):
+                        continue
+        
+        logging.info(f"OpenProject successful logins: {len(successful_logins)} users")
+        return successful_logins
+        
+    except Exception as e:
+        logging.error(f"Error getting OpenProject successful logins: {e}")
+        return []
+
+def get_openproject_active_users(hours=1):
+    """Get currently active OpenProject users from recent logs"""
+    try:
+        since_hours = f"{hours}h"
+        cmd = f"docker logs openproject --since={since_hours} | grep 'user=' | tail -100"
+        output = run_command(cmd)
+        
+        # Get user database for name resolution
+        users_db = get_openproject_users_from_db()
+        
+        active_users = {}
+        user_ips = {}
+        
+        for line in output.split('\n'):
+            if line.strip() and 'user=' in line:
+                try:
+                    # Extract user ID
+                    user_match = re.search(r'user=(\d+)', line)
+                    # Try to extract IP from host parameter
+                    host_match = re.search(r'host=([^\s]+)', line)
+                    # Extract timestamp
+                    time_match = re.search(r'\[([0-9-T:.]+)', line)
+                    
+                    if user_match:
+                        user_id = int(user_match.group(1))
+                        
+                        # Skip system users (1=System, 2=Anonymous)
+                        if user_id <= 2:
+                            continue
+                        
+                        # Get IP from host or try other patterns
+                        ip = 'unknown'
+                        if host_match:
+                            host = host_match.group(1)
+                            # Extract IP from host:port format
+                            if ':' in host:
+                                ip_part = host.split(':')[0]
+                                if re.match(r'^\d+\.\d+\.\d+\.\d+$', ip_part):
+                                    ip = ip_part
+                        
+                        timestamp = time_match.group(1) if time_match else 'unknown'
+                        
+                        # Get user info from database
+                        user_info = users_db.get(user_id, {})
+                        display_name = user_info.get('display_name', f'User {user_id}')
+                        
+                        active_users[user_id] = {
+                            'user_id': user_id,
+                            'username': display_name,
+                            'login': user_info.get('login', ''),
+                            'last_activity': timestamp,
+                            'service': 'OpenProject'
+                        }
+                        
+                        if ip != 'unknown':
+                            user_ips[user_id] = ip
+                            
+                except Exception as e:
+                    logging.error(f"Error parsing active user line: {e}")
+                    continue
+        
+        # Add IP and geo info to active users
+        for user_id, user_data in active_users.items():
+            if user_id in user_ips:
+                ip = user_ips[user_id]
+                user_data['ip'] = ip
+                geo_info = get_geo_info(ip)
+                user_data['country'] = geo_info['country']
+                
+                trusted_ips = load_trusted_ips()
+                user_data['is_trusted'] = ip in trusted_ips.get('ips', [])
+            else:
+                user_data['ip'] = 'unknown'
+                user_data['country'] = 'Unknown'
+                user_data['is_trusted'] = False
+        
+        active_list = list(active_users.values())
+        logging.info(f"OpenProject active users: {len(active_list)} users")
+        return active_list
+        
+    except Exception as e:
+        logging.error(f"Error getting OpenProject active users: {e}")
+        return []
+
+def detect_potential_intruders():
+    """Detect potential security issues in OpenProject"""
+    try:
+        # Get total registered users
+        users_db = get_openproject_users_from_db()
+        total_registered = len(users_db)
+        
+        # Get currently active users
+        active_users = get_openproject_active_users(1)
+        total_active = len(active_users)
+        
+        # Check for anomalies
+        alerts = []
+        
+        if total_active > total_registered:
+            alerts.append({
+                'type': 'critical',
+                'message': f'Active users ({total_active}) exceed registered users ({total_registered})',
+                'severity': 'high'
+            })
+        
+        if total_active > total_registered * 0.8:  # More than 80% of users active
+            alerts.append({
+                'type': 'warning',
+                'message': f'High user activity: {total_active}/{total_registered} users active',
+                'severity': 'medium'
+            })
+        
+        return {
+            'total_registered': total_registered,
+            'total_active': total_active,
+            'alerts': alerts
+        }
+        
+    except Exception as e:
+        logging.error(f"Error detecting potential intruders: {e}")
+        return {'total_registered': 0, 'total_active': 0, 'alerts': []}
+
 def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_ssh, active_web):
     """Create a comprehensive map showing SSH and OpenProject activity"""
     try:
@@ -487,45 +742,49 @@ def dashboard():
 
 @app.route('/api/summary')
 def api_summary():
-    """API endpoint for summary statistics including SSH and OpenProject"""
+    """API endpoint for enhanced summary statistics including SSH and OpenProject"""
     try:
+        # SSH Data (existing)
         ssh_entries = get_ssh_log_entries(24)
-        op_entries, op_users = get_openproject_logs(24)
         active_ssh = get_active_ssh_sessions()
-        active_web = get_active_web_connections()
         fail2ban_data = get_fail2ban_status()
         
         ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack']
         ssh_successful = [e for e in ssh_entries if e['type'] == 'success']
-        
-        # Count OpenProject access
-        op_successful = [e for e in op_entries if e['status'] < 400]
-        op_errors = [e for e in op_entries if e['status'] >= 400]
-        
         total_ssh_active = len(active_ssh['user_sessions']) + len(active_ssh['network_connections'])
-        total_web_active = len(active_web)
-        unique_op_users = len(set(user['user_id'] for user in op_users if user['user_id'] != 'anonymous'))
+        
+        # OpenProject Data (new and improved)
+        op_failed_logins = get_openproject_failed_logins(24)
+        op_successful_logins = get_openproject_successful_logins(24)
+        op_active_users = get_openproject_active_users(1)
+        active_web = get_active_web_connections()
+        intrusion_data = detect_potential_intruders()
         
         summary = {
-            # SSH Stats
+            # SSH Server Monitoring (24h)
+            'ssh_failed_logins': len(ssh_attacks),
+            'ssh_successful_logins': len(ssh_successful),
+            'ssh_active_connections': total_ssh_active,
+            'ssh_blocked_ips': len(fail2ban_data['banned_ips']),
+            
+            # OpenProject Application Monitoring (24h)
+            'op_failed_logins': len(op_failed_logins),
+            'op_successful_logins': len(op_successful_logins),
+            'op_active_users': len(op_active_users),
+            'op_blocked_users': 0,  # Placeholder - OpenProject doesn't have built-in user blocking
+            
+            # Security Analysis
+            'total_registered_users': intrusion_data['total_registered'],
+            'potential_security_alerts': len(intrusion_data['alerts']),
+            'total_active_connections': total_ssh_active + len(active_web),
+            
+            # Legacy compatibility (for existing frontend)
             'ssh_attacks_24h': len(ssh_attacks),
             'ssh_successful_24h': len(ssh_successful),
-            'ssh_active_sessions': total_ssh_active,
-            'ssh_banned_ips': len(fail2ban_data['banned_ips']),
-            'ssh_unique_attack_ips': len(set(attack['ip'] for attack in ssh_attacks)),
-            
-            # OpenProject Stats
-            'op_requests_24h': len(op_entries),
-            'op_successful_24h': len(op_successful),
-            'op_errors_24h': len(op_errors),
-            'op_active_users': unique_op_users,
-            'op_active_connections': total_web_active,
-            
-            # Combined Stats
-            'total_active_connections': total_ssh_active + total_web_active
+            'op_active_connections': len(active_web)
         }
         
-        logging.info(f"API Summary: {summary}")
+        logging.info(f"Enhanced API Summary: SSH({len(ssh_attacks)} attacks, {len(ssh_successful)} success), OP({len(op_failed_logins)} failed, {len(op_successful_logins)} success, {len(op_active_users)} active)")
         return jsonify(summary)
     except Exception as e:
         logging.error(f"Error in summary API: {e}")
@@ -653,6 +912,58 @@ def api_map():
     except Exception as e:
         logging.error(f"Error in map API: {e}")
         return jsonify({'map_html': '<p>Error generando mapa</p>'})
+
+# New OpenProject API endpoints
+@app.route('/api/openproject/failed-logins')
+def api_openproject_failed_logins():
+    """API endpoint for OpenProject failed login attempts"""
+    try:
+        failed_logins = get_openproject_failed_logins(24)
+        return jsonify(failed_logins)
+    except Exception as e:
+        logging.error(f"Error in OpenProject failed logins API: {e}")
+        return jsonify([])
+
+@app.route('/api/openproject/successful-logins')
+def api_openproject_successful_logins():
+    """API endpoint for OpenProject successful logins"""
+    try:
+        successful_logins = get_openproject_successful_logins(24)
+        return jsonify(successful_logins)
+    except Exception as e:
+        logging.error(f"Error in OpenProject successful logins API: {e}")
+        return jsonify([])
+
+@app.route('/api/openproject/active-users')
+def api_openproject_active_users():
+    """API endpoint for currently active OpenProject users"""
+    try:
+        active_users = get_openproject_active_users(1)
+        return jsonify(active_users)
+    except Exception as e:
+        logging.error(f"Error in OpenProject active users API: {e}")
+        return jsonify([])
+
+@app.route('/api/openproject/users-db')
+def api_openproject_users_db():
+    """API endpoint for all OpenProject users from database"""
+    try:
+        users = get_openproject_users_from_db()
+        users_list = list(users.values())
+        return jsonify(users_list)
+    except Exception as e:
+        logging.error(f"Error in OpenProject users DB API: {e}")
+        return jsonify([])
+
+@app.route('/api/security/intrusion-detection')
+def api_intrusion_detection():
+    """API endpoint for security intrusion detection analysis"""
+    try:
+        intrusion_data = detect_potential_intruders()
+        return jsonify(intrusion_data)
+    except Exception as e:
+        logging.error(f"Error in intrusion detection API: {e}")
+        return jsonify({'total_registered': 0, 'total_active': 0, 'alerts': []})
 
 if __name__ == '__main__':
     logging.info("Starting SSH + OpenProject Monitor Dashboard...")
