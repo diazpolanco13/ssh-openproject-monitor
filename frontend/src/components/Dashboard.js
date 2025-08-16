@@ -32,9 +32,29 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000); // Actualizar cada 30 segundos
-    return () => clearInterval(interval);
+    
+    // Dashboard completo cada 15 minutos
+    const dashboardInterval = setInterval(fetchDashboardData, 900000); // 15 minutos
+    
+    // Alertas críticas cada 5 minutos
+    const alertsInterval = setInterval(fetchSecurityAlerts, 300000); // 5 minutos
+    
+    return () => {
+      clearInterval(dashboardInterval);
+      clearInterval(alertsInterval);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchSecurityAlerts = async () => {
+    try {
+      console.log('Actualizando alertas críticas:', new Date().toLocaleTimeString());
+      const alertsResponse = await axios.get(`${API_BASE}/api/security/intrusion-detection`);
+      setSecurityAlerts(Array.isArray(alertsResponse.data) ? alertsResponse.data : []);
+    } catch (alertError) {
+      console.warn('Security alerts not available:', alertError);
+      setSecurityAlerts([]);
+    }
+  };
 
   const fetchSSHData = async () => {
     try {
@@ -78,20 +98,13 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('Actualizando dashboard completo:', new Date().toLocaleTimeString());
       
       await Promise.all([
         fetchSSHData(),
-        fetchOpenProjectData()
+        fetchOpenProjectData(),
+        fetchSecurityAlerts() // Incluir alertas en carga completa
       ]);
-
-      // Fetch security alerts
-      try {
-        const alertsResponse = await axios.get(`${API_BASE}/api/security/intrusion-detection`);
-        setSecurityAlerts(Array.isArray(alertsResponse.data) ? alertsResponse.data : []);
-      } catch (alertError) {
-        console.warn('Security alerts not available:', alertError);
-        setSecurityAlerts([]);
-      }
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
