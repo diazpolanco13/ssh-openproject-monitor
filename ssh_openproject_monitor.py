@@ -6,12 +6,14 @@ import logging
 import socket
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template
+from flask_cors import CORS
 import geoip2.database
 import folium
 import os
 from collections import defaultdict, Counter
 
 app = Flask(__name__)
+CORS(app)
 
 # Configure logging
 logging.basicConfig(
