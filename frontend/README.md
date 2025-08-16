@@ -1,21 +1,15 @@
-# Frontend SSH Monitor - React + Tailwind CSS
+# Getting Started with Create React App
 
-Este es el frontend moderno para el sistema de monitoreo SSH y OpenProject, construido con React y Tailwind CSS.
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Características
-- ✅ Dashboard en tiempo real
-- ✅ Métricas SSH separadas de OpenProject
-- ✅ Interfaz responsive con Tailwind CSS
-- ✅ Componentes modulares
-- ✅ Actualizaciones automáticas cada 30 segundos
-- ✅ Alertas de seguridad en tiempo real
+## Available Scripts
 
-## Scripts Disponibles
+In the project directory, you can run:
 
 ### `npm start`
 
-Ejecuta la aplicación en modo desarrollo.\
-Abre [http://localhost:3000](http://localhost:3000) para verla en el navegador.
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
 The page will reload when you make changes.\
 You may also see any lint errors in the console.
