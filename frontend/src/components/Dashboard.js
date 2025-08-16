@@ -6,6 +6,7 @@ import MetricCard from './MetricCard';
 import SSHSection from './SSHSection';
 import OpenProjectSection from './OpenProjectSection';
 import SecurityAlerts from './SecurityAlerts';
+import GeographicalMap from './GeographicalMap';
 
 const Dashboard = () => {
   const [sshData, setSshData] = useState({
@@ -156,7 +157,7 @@ const Dashboard = () => {
         )}
 
         {/* Secciones principales */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <SSHSection 
             data={sshData}
             onRefresh={fetchDashboardData}
@@ -165,6 +166,11 @@ const Dashboard = () => {
             data={openProjectData}
             onRefresh={fetchDashboardData}
           />
+        </div>
+
+        {/* Mapa geográfico */}
+        <div className="mb-8">
+          <GeographicalMap />
         </div>
       </main>
     </div>

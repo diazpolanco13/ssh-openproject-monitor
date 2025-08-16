@@ -739,7 +739,16 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
 
 @app.route('/')
 def dashboard():
-    """Main dashboard page"""
+    """Redirect to React frontend"""
+    from flask import redirect, request
+    # En desarrollo, redirigir a localhost:3000
+    # En producción, esto debería apuntar al build de React servido por nginx
+    host = request.host.split(':')[0]  # Obtener solo la IP sin puerto
+    return redirect(f'http://{host}:3000', code=302)
+
+@app.route('/old-dashboard')
+def old_dashboard():
+    """Legacy HTML dashboard for testing purposes"""
     return render_template('dashboard_combined.html')
 
 @app.route('/api/summary')
@@ -914,6 +923,120 @@ def api_map():
     except Exception as e:
         logging.error(f"Error in map API: {e}")
         return jsonify({'map_html': '<p>Error generando mapa</p>'})
+
+@app.route('/api/geo-data')
+def api_geo_data():
+    """API endpoint for geographical data for React map"""
+    try:
+        ssh_entries = get_ssh_log_entries(24)
+        op_entries, _ = get_openproject_logs(24)
+        
+        ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack']
+        ssh_successful = [e for e in ssh_entries if e['type'] == 'success']
+        
+        active_ssh = get_active_ssh_sessions()
+        active_web = get_active_web_connections()
+        trusted_ips = load_trusted_ips()
+        
+        # Prepare geo data for React
+        geo_data = {
+            'ssh_attacks': [],
+            'ssh_successful': [],
+            'openproject_access': [],
+            'active_ssh': [],
+            'active_web': []
+        }
+        
+        # SSH attacks
+        attack_counts = Counter()
+        for attack in ssh_attacks[-100:]:
+            geo_info = get_geo_info(attack['ip'])
+            if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                attack_counts[(geo_info['lat'], geo_info['lon'], attack['ip'])] += 1
+        
+        for (lat, lon, ip), count in attack_counts.items():
+            geo_data['ssh_attacks'].append({
+                'lat': lat,
+                'lon': lon,
+                'ip': ip,
+                'count': count,
+                'type': 'attack'
+            })
+        
+        # SSH successful
+        ssh_success_counts = Counter()
+        for conn in ssh_successful[-50:]:
+            geo_info = get_geo_info(conn['ip'])
+            if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                ssh_success_counts[(geo_info['lat'], geo_info['lon'], conn['ip'])] += 1
+        
+        for (lat, lon, ip), count in ssh_success_counts.items():
+            is_trusted = ip in trusted_ips.get('ips', [])
+            geo_data['ssh_successful'].append({
+                'lat': lat,
+                'lon': lon,
+                'ip': ip,
+                'count': count,
+                'is_trusted': is_trusted,
+                'type': 'success'
+            })
+        
+        # OpenProject access
+        op_access_counts = Counter()
+        for access in op_entries[-50:]:
+            if access['ip'] != 'unknown':
+                geo_info = get_geo_info(access['ip'])
+                if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                    op_access_counts[(geo_info['lat'], geo_info['lon'], access['ip'])] += 1
+        
+        for (lat, lon, ip), count in op_access_counts.items():
+            is_trusted = ip in trusted_ips.get('ips', [])
+            geo_data['openproject_access'].append({
+                'lat': lat,
+                'lon': lon,
+                'ip': ip,
+                'count': count,
+                'is_trusted': is_trusted,
+                'type': 'openproject'
+            })
+        
+        # Active SSH sessions
+        for session in active_ssh.get('network_connections', []):
+            geo_info = get_geo_info(session['remote_ip'])
+            if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                geo_data['active_ssh'].append({
+                    'lat': geo_info['lat'],
+                    'lon': geo_info['lon'],
+                    'ip': session['remote_ip'],
+                    'port': session['remote_port'],
+                    'is_trusted': session['is_trusted'],
+                    'type': 'active_ssh'
+                })
+        
+        # Active web connections
+        for conn in active_web:
+            geo_info = get_geo_info(conn['remote_ip'])
+            if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                geo_data['active_web'].append({
+                    'lat': geo_info['lat'],
+                    'lon': geo_info['lon'],
+                    'ip': conn['remote_ip'],
+                    'port': conn['remote_port'],
+                    'protocol': conn['protocol'],
+                    'is_trusted': conn['is_trusted'],
+                    'type': 'active_web'
+                })
+        
+        return jsonify(geo_data)
+    except Exception as e:
+        logging.error(f"Error in geo-data API: {e}")
+        return jsonify({
+            'ssh_attacks': [],
+            'ssh_successful': [],
+            'openproject_access': [],
+            'active_ssh': [],
+            'active_web': []
+        })
 
 # New OpenProject API endpoints
 @app.route('/api/openproject/failed-logins')
