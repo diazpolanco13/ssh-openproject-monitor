@@ -34,13 +34,10 @@ const Dashboard = () => {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 30000); // Actualizar cada 30 segundos
     return () => clearInterval(interval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchDashboardData = async () => {
+  const fetchSSHData = async () => {
     try {
-      setLoading(true);
-      
-      // Fetch SSH data - usando endpoints que existen
       const [sshAttacks, sshSuccess] = await Promise.all([
         axios.get(`${API_BASE}/api/ssh/attacks`),
         axios.get(`${API_BASE}/api/ssh/successful`)
@@ -49,11 +46,16 @@ const Dashboard = () => {
       setSshData({
         attacks: Array.isArray(sshAttacks.data) ? sshAttacks.data.length : 0,
         successfulLogins: Array.isArray(sshSuccess.data) ? sshSuccess.data.length : 0,
-        blockedIPs: 0, // Este endpoint no existe aún
-        geoData: [] // Este endpoint no existe aún
+        blockedIPs: 0,
+        geoData: []
       });
+    } catch (err) {
+      console.error('Error fetching SSH data:', err);
+    }
+  };
 
-      // Fetch OpenProject data - ajustar formato de respuesta
+  const fetchOpenProjectData = async () => {
+    try {
       const [opUsers, opActive, opFailed, opSuccess] = await Promise.all([
         axios.get(`${API_BASE}/api/openproject/users-db`),
         axios.get(`${API_BASE}/api/openproject/active-users`),
@@ -68,8 +70,21 @@ const Dashboard = () => {
         successfulLogins: Array.isArray(opSuccess.data) ? opSuccess.data.length : 0,
         users: Array.isArray(opUsers.data) ? opUsers.data : []
       });
+    } catch (err) {
+      console.error('Error fetching OpenProject data:', err);
+    }
+  };
 
-      // Fetch security alerts - usando endpoint que existe
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      await Promise.all([
+        fetchSSHData(),
+        fetchOpenProjectData()
+      ]);
+
+      // Fetch security alerts
       try {
         const alertsResponse = await axios.get(`${API_BASE}/api/security/intrusion-detection`);
         setSecurityAlerts(Array.isArray(alertsResponse.data) ? alertsResponse.data : []);
@@ -160,11 +175,11 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <SSHSection 
             data={sshData}
-            onRefresh={fetchDashboardData}
+            onRefresh={fetchSSHData}
           />
           <OpenProjectSection 
             data={openProjectData}
-            onRefresh={fetchDashboardData}
+            onRefresh={fetchOpenProjectData}
           />
         </div>
 
