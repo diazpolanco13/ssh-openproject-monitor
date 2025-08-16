@@ -1,94 +1,34 @@
 import L from 'leaflet';
 
-// Configuración de iconos personalizados para el mapa
-export const createCustomIcon = (color, type = 'circle') => {
+// Fix for default markers in react-leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Configuración personalizada para diferentes tipos de marcadores
+export const createCustomIcon = (color = '#ef4444', type = 'attack') => {
   const svgIcon = `
-    <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="10" cy="10" r="8" fill="${color}" stroke="white" stroke-width="2"/>
-      <circle cx="10" cy="10" r="4" fill="white" opacity="0.8"/>
+    <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+      <path fill="${color}" stroke="#fff" stroke-width="2" d="M12.5,2 C7.25,2 3,6.25 3,11.5 C3,18.5 12.5,39 12.5,39 S22,18.5 22,11.5 C22,6.25 17.75,2 12.5,2 Z"/>
+      <circle fill="#fff" cx="12.5" cy="11.5" r="4"/>
     </svg>
   `;
   
   return L.divIcon({
     html: svgIcon,
-    className: 'custom-div-icon',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -10]
+    iconSize: [25, 41],
+    iconAnchor: [12.5, 41],
+    popupAnchor: [0, -41],
+    className: 'custom-marker'
   });
 };
 
-// Iconos predefinidos por tipo de evento
-export const mapIcons = {
-  attack: createCustomIcon('#dc2626'), // rojo
-  success: createCustomIcon('#16a34a'), // verde
-  openproject: createCustomIcon('#2563eb'), // azul
-  active: createCustomIcon('#7c3aed'), // púrpura
-  trusted: createCustomIcon('#059669'), // verde esmeralda
-  failed: createCustomIcon('#ea580c') // naranja
-};
+export const attackIcon = createCustomIcon('#ef4444', 'attack');
+export const successIcon = createCustomIcon('#22c55e', 'success');
+export const warningIcon = createCustomIcon('#f97316', 'warning');
 
-// Configuración del mapa base
-export const mapConfig = {
-  center: [40.4168, -3.7038], // Madrid por defecto
-  zoom: 2,
-  minZoom: 2,
-  maxZoom: 18,
-  scrollWheelZoom: true,
-  attributionControl: true
-};
-
-// Configuración de capas de tiles
-export const tileLayerConfig = {
-  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 19
-};
-
-// Configuración de clusters
-export const clusterConfig = {
-  chunkedLoading: true,
-  chunkProgress: (processed, total) => {
-    console.log(`Procesando marcadores: ${processed}/${total}`);
-  },
-  maxClusterRadius: 80,
-  spiderfyOnMaxZoom: true,
-  showCoverageOnHover: false,
-  zoomToBoundsOnClick: true
-};
-
-// Estilos CSS para los iconos
-export const iconStyles = `
-  .custom-div-icon {
-    background: transparent;
-    border: none;
-  }
-  
-  .leaflet-popup-content-wrapper {
-    border-radius: 8px;
-  }
-  
-  .leaflet-popup-content {
-    margin: 12px 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  
-  .popup-title {
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 8px;
-  }
-  
-  .popup-info {
-    color: #6b7280;
-    font-size: 0.875rem;
-    line-height: 1.4;
-  }
-  
-  .popup-timestamp {
-    color: #9ca3af;
-    font-size: 0.75rem;
-    margin-top: 6px;
-    font-style: italic;
-  }
-`;
+export default L;
