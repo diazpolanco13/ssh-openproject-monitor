@@ -1049,11 +1049,27 @@ def api_openproject_active_users():
 
 @app.route('/api/openproject/users-db')
 def api_openproject_users_db():
-    """API endpoint for all OpenProject users from database"""
+    """API endpoint for valid OpenProject users from database (filters out demo/invalid users)"""
     try:
         users = get_openproject_users_from_db()
         users_list = list(users.values())
-        return jsonify(users_list)
+        
+        # Filter out invalid/demo users
+        valid_users = []
+        for user in users_list:
+            # Skip users with generic names like user_1, user_2, etc.
+            if user.get('login', '').startswith('user_'):
+                continue
+            
+            # Skip users without proper display names (likely demo users)
+            display_name = user.get('display_name', '')
+            if not display_name or display_name.startswith('User '):
+                continue
+                
+            valid_users.append(user)
+        
+        logging.info(f"Filtered users: {len(valid_users)} valid users from {len(users_list)} total")
+        return jsonify(valid_users)
     except Exception as e:
         logging.error(f"Error in OpenProject users DB API: {e}")
         return jsonify([])
