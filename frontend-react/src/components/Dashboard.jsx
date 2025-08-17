@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import ServerStatusSectionCompact from './ServerStatusSectionCompact';
 import SSHSection from './SSHSection';
+import OpenProjectSection from './OpenProjectSection';
 
 const Dashboard = () => {
   const [sshData, setSshData] = useState({
@@ -188,18 +189,10 @@ const Dashboard = () => {
             onRefresh={fetchSSHData}
           />
 
-          {/* OpenProjectSection placeholder */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              � OpenProject Section
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              OpenProjectSection component - por migrar
-            </p>
-            <div className="mt-4 text-sm text-gray-500 dark:text-gray-500">
-              Total: {openProjectData.totalUsers} | Activos: {openProjectData.activeUsers} | Fallidos: {openProjectData.failedLogins}
-            </div>
-          </div>
+          <OpenProjectSection 
+            data={openProjectData}
+            onRefresh={fetchOpenProjectData}
+          />
         </div>
 
         {/* Mapa geográfico */}
