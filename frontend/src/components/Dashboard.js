@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, AlertTriangle, Activity } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import Header from './Header';
-import MetricCard from './MetricCard';
+import ServerStatusSectionCompact from './ServerStatusSectionCompact';
 import SSHSection from './SSHSection';
 import OpenProjectSection from './OpenProjectSection';
 import SecurityAlerts from './SecurityAlerts';
@@ -160,36 +160,9 @@ const Dashboard = () => {
       <Header />
       
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Métricas principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <MetricCard
-            title="Ataques SSH"
-            value={sshData.attacks}
-            icon={Shield}
-            color="red"
-            subtitle="Intentos bloqueados"
-          />
-          <MetricCard
-            title="Usuarios OP"
-            value={openProjectData.totalUsers}
-            icon={Users}
-            color="blue"
-            subtitle="Total en sistema"
-          />
-          <MetricCard
-            title="Usuarios Activos"
-            value={openProjectData.activeUsers}
-            icon={Activity}
-            color="green"
-            subtitle="OpenProject"
-          />
-          <MetricCard
-            title="IPs Bloqueadas"
-            value={sshData.blockedIPs}
-            icon={AlertTriangle}
-            color="orange"
-            subtitle="Fail2ban activo"
-          />
+        {/* Estado del Servidor */}
+        <div className="mb-8">
+          <ServerStatusSectionCompact />
         </div>
 
         {/* Alertas de seguridad */}

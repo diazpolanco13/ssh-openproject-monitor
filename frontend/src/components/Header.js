@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, Server } from 'lucide-react';
+import { APP_CONFIG } from '../config/app';
 
 const Header = () => {
   const currentTime = new Date().toLocaleString('es-ES');
@@ -15,10 +16,10 @@ const Header = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                SSH & OpenProject Monitor
+                {APP_CONFIG.name}
               </h1>
               <p className="text-sm text-gray-500">
-                Sistema de Monitoreo y Seguridad
+                {APP_CONFIG.subtitle} <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-md">v{APP_CONFIG.version}</span>
               </p>
             </div>
           </div>
