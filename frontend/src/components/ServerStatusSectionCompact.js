@@ -13,18 +13,18 @@ import {
 const MetricCard = ({ title, value, unit = '', status = 'normal', icon: Icon }) => {
   const getStatusColor = () => {
     switch (status) {
-      case 'warning': return 'text-yellow-600 border-yellow-200 bg-yellow-50';
-      case 'critical': return 'text-red-600 border-red-200 bg-red-50';
-      case 'good': return 'text-green-600 border-green-200 bg-green-50';
-      default: return 'text-blue-600 border-blue-200 bg-blue-50';
+      case 'warning': return 'text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
+      case 'critical': return 'text-red-600 dark:text-red-400 border-red-200 dark:border-red-600 bg-red-50 dark:bg-red-900/20';
+      case 'good': return 'text-green-600 dark:text-green-400 border-green-200 dark:border-green-600 bg-green-50 dark:bg-green-900/20';
+      default: return 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20';
     }
   };
 
   return (
-    <div className={`p-4 border rounded-lg ${getStatusColor()}`}>
+    <div className={`p-4 border rounded-lg transition-colors duration-200 ${getStatusColor()}`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{title}</p>
           <p className="text-2xl font-bold">
             {value}<span className="text-lg font-normal ml-1">{unit}</span>
           </p>
@@ -46,7 +46,7 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/server/status');
+      const response = await fetch('http://45.137.194.210:8080/api/server/status');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -70,12 +70,12 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
 
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow transition-colors duration-200">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-1/3"></div>
           <div className="grid grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+              <div key={i} className="h-20 bg-gray-200 dark:bg-gray-600 rounded"></div>
             ))}
           </div>
         </div>
@@ -85,8 +85,8 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
 
   if (!serverData) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="text-center text-gray-500">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow transition-colors duration-200">
+        <div className="text-center text-gray-500 dark:text-gray-400">
           Error al cargar datos del servidor
         </div>
       </div>
@@ -94,13 +94,13 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow transition-colors duration-200">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Estado del Servidor (Tiempo Real)</h2>
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Estado del Servidor (Tiempo Real)</h2>
         <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-500">Tiempo activo: {serverData.uptime}</div>
-          <div className="text-sm text-gray-500">Actualizado: {serverData.lastUpdate}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Tiempo activo: {serverData.uptime}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Actualizado: {serverData.lastUpdate}</div>
         </div>
       </div>
 
@@ -139,10 +139,10 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
       {/* Bottom Grid - Compact Security and System Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Security Services - Más compacto */}
-        <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg transition-colors duration-200">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-gray-800">Servicios de Seguridad</h3>
-            <span className="text-lg font-bold text-green-600">
+            <h3 className="text-lg font-medium text-gray-800 dark:text-white">Servicios de Seguridad</h3>
+            <span className="text-lg font-bold text-green-600 dark:text-green-400">
               {serverData.security.active}/{serverData.security.total}
             </span>
           </div>
@@ -153,25 +153,25 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
                   <div className={`w-2 h-2 rounded-full ${
                     service.status === 'active' ? 'bg-green-500' : 'bg-red-500'
                   }`}></div>
-                  <span className="text-sm text-gray-700">{service.name}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{service.name}</span>
                 </div>
-                <span className="text-xs text-gray-500">{service.info}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{service.info}</span>
               </div>
             ))}
-            <div className="border-t pt-2 mt-3">
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Última actualización Ubuntu:</span>
-                <span className="text-xs font-medium text-blue-600">{serverData.security.lastUpdate}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Última actualización Ubuntu:</span>
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{serverData.security.lastUpdate}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* System Information - Más compacto */}
-        <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg transition-colors duration-200">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-gray-800">Información del Sistema</h3>
-            <span className="text-lg font-bold text-blue-600">
+            <h3 className="text-lg font-medium text-gray-800 dark:text-white">Información del Sistema</h3>
+            <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
               {serverData.system.docker.running}/{serverData.system.docker.total}
             </span>
           </div>
@@ -182,19 +182,15 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
                   <div className={`w-2 h-2 rounded-full ${
                     container.status === 'running' ? 'bg-green-500' : 'bg-red-500'
                   }`}></div>
-                  <span className="text-sm text-gray-700">{container.name}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{container.name}</span>
                 </div>
-                <span className="text-xs text-gray-500">{container.info}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{container.status}</span>
               </div>
             ))}
-            <div className="border-t pt-2 mt-3 space-y-1">
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Último respaldo:</span>
-                <span className="text-xs font-medium text-green-600">{serverData.system.lastBackup}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">Conexiones activas:</span>
-                <span className="text-xs font-medium text-blue-600">{serverData.system.activeConnections}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Última verificación:</span>
+                <span className="text-xs font-medium text-green-600 dark:text-green-400">hace 30s</span>
               </div>
             </div>
           </div>

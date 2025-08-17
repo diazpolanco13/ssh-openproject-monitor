@@ -32,21 +32,21 @@ const GeographicalMap = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors duration-200">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
           Mapa Geográfico de Conexiones
         </h3>
         <div className="flex justify-center items-center h-64">
-          <div className="text-gray-600">Cargando mapa...</div>
+          <div className="text-gray-600 dark:text-gray-400">Cargando mapa...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors duration-200">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
           Mapa Geográfico de Conexiones
         </h3>
         
@@ -55,7 +55,7 @@ const GeographicalMap = () => {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+            className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-50 transition-colors duration-200"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             <span>Actualizar</span>
@@ -65,19 +65,19 @@ const GeographicalMap = () => {
           <div className="flex items-center space-x-4 text-sm">
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span className="text-gray-600">SSH Confiable</span>
+              <span className="text-gray-600 dark:text-gray-400">SSH Confiable</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-gray-600">SSH Exitoso</span>
+              <span className="text-gray-600 dark:text-gray-400">SSH Exitoso</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-              <span className="text-gray-600">OpenProject</span>
+              <span className="text-gray-600 dark:text-gray-400">OpenProject</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-              <span className="text-gray-600">HTTPS</span>
+              <span className="text-gray-600 dark:text-gray-400">HTTPS</span>
             </div>
           </div>
         </div>
@@ -90,7 +90,7 @@ const GeographicalMap = () => {
             dangerouslySetInnerHTML={{ __html: mapHtml }}
           />
         ) : (
-          <div className="flex justify-center items-center h-full text-gray-600">
+          <div className="flex justify-center items-center h-full text-gray-600 dark:text-gray-400">
             No hay datos del mapa disponibles
           </div>
         )}
