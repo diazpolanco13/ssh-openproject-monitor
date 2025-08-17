@@ -1,33 +1,209 @@
-# Getting Started with Create React App
+# Frontend React - SSH + OpenProject Monitor
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Dashboard moderno en React para el sistema de monitoreo SSH + OpenProject.
 
-## Available Scripts
+## 🚀 Inicio Rápido
 
-In the project directory, you can run:
+### Desarrollo
+```bash
+cd /opt/ssh-monitor/frontend
+npm install
+npm start
+# Abre http://localhost:3000
+```
+
+### Producción
+```bash
+npm run build
+# Archivos en ./build/ listos para despliegue
+```
+
+## 🏗️ Arquitectura
+
+### Componentes Principales
+- **Dashboard.js** - Layout principal y gestión de estado
+- **OpenProjectSection.js** - Monitoreo usuarios OpenProject (⭐ componente estrella)
+- **SSHSection.js** - Ataques y conexiones SSH
+- **GeographicalMap.js** - Mapas geográficos con Leaflet
+- **SecurityAlerts.js** - Alertas de seguridad en tiempo real
+
+### Flujo de Datos
+```
+Dashboard.js (estado central)
+    ↓
+APIs Backend (http://localhost:8080)
+    ↓
+Componentes (props)
+    ↓
+UI (React + Tailwind)
+```
+
+## 🔧 Configuración
+
+### Variables de Entorno (.env)
+```bash
+REACT_APP_API_URL=http://localhost:8080
+GENERATE_SOURCEMAP=false
+```
+
+### Dependencias Principales
+- **React 18** - Framework principal
+- **Tailwind CSS** - Estilos utilitarios
+- **Lucide React** - Iconografía
+- **Leaflet** - Mapas interactivos
+
+## 📱 Características UI/UX
+
+### Responsive Design
+- ✅ Desktop (1200px+)
+- ✅ Tablet (768px - 1199px)  
+- ✅ Mobile (320px - 767px)
+
+### Temas y Colores
+- **Primary**: Azul (#1A67A3)
+- **Success**: Verde (#1F883D)
+- **Warning**: Amarillo (#FFB020)
+- **Danger**: Rojo (#DA3633)
+- **Neutral**: Grises diversos
+
+### Actualización Automática
+- Fetch datos cada 5 minutos
+- Indicadores visuales de carga
+- Manejo de errores graceful
+
+## 🔍 OpenProjectSection.js - Detalles Técnicos
+
+### Funcionalidades Avanzadas
+```javascript
+// Filtrado de usuarios fantasmas
+const realUsers = data.activeConnections.filter(conn => 
+  data.users.find(user => user.id === conn.user_id)
+);
+
+// Ordenamiento inteligente
+.sort((a, b) => {
+  if (a.isActive && !b.isActive) return -1;
+  return b.lastActivity - a.lastActivity;
+});
+```
+
+### Estados de Usuario
+- **🟢 Conectado** - Activo en los últimos minutos
+- **🟡 Actividad Reciente** - Último login < 24 horas
+- **⚫ Inactivo** - Sin actividad reciente
+
+## 🛠️ Scripts Disponibles
 
 ### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Servidor de desarrollo con hot reload en puerto 3000.
 
 ### `npm run build`
+Build optimizado para producción con minificación.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### `npm test`
+Ejecuta tests unitarios con Jest.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### `npm run eject`
+⚠️ **Irreversible** - Expone configuración de Webpack.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 📦 Estructura de Archivos
+
+```
+frontend/
+├── public/
+│   ├── index.html
+│   └── favicon.ico
+├── src/
+│   ├── components/          # Componentes React
+│   │   ├── Dashboard.js     # 🏠 Principal
+│   │   ├── OpenProjectSection.js # ⭐ OpenProject
+│   │   ├── SSHSection.js    # 🔒 SSH
+│   │   ├── GeographicalMap.js # 🗺️ Mapas
+│   │   └── ...
+│   ├── utils/
+│   │   └── leafletConfig.js # ⚙️ Config mapas
+│   ├── App.js              # 🚀 App principal
+│   ├── App.css             # 🎨 Estilos globales
+│   └── index.js            # 📍 Entry point
+├── build/                  # 📦 Build producción
+├── package.json            # 📋 Dependencias
+└── tailwind.config.js      # 🎨 Config Tailwind
+```
+
+## 🔗 Integración Backend
+
+### APIs Consumidas
+```javascript
+// Datos OpenProject
+const response = await fetch('/api/openproject/users');
+const users = await response.json();
+
+// Datos SSH
+const sshData = await fetch('/api/ssh/attacks');
+```
+
+### Manejo de Errores
+```javascript
+try {
+  const data = await fetchData();
+  setData(data);
+} catch (error) {
+  console.error('Error fetching data:', error);
+  setError('Failed to load data');
+}
+```
+
+## 🚀 Despliegue
+
+### Build Estático
+```bash
+npm run build
+# Copiar ./build/ al servidor web
+```
+
+### Con Nginx
+```nginx
+server {
+    listen 3000;
+    root /opt/ssh-monitor/frontend/build;
+    index index.html;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /api {
+        proxy_pass http://localhost:8080;
+    }
+}
+```
+
+## 🐛 Troubleshooting
+
+### Build falla
+```bash
+# Limpiar cache
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### APIs no responden
+```bash
+# Verificar backend
+curl http://localhost:8080/api/openproject/users
+# Verificar CORS en navegador
+```
+
+### Estilos rotos
+```bash
+# Verificar Tailwind
+npm run build
+# Verificar importaciones CSS
+```
+
+---
+
+**Nota**: Este frontend está optimizado para trabajar con el backend Flask en puerto 8080. Asegúrate de que el backend esté corriendo antes de iniciar el frontend.
 
 ### `npm run eject`
 
