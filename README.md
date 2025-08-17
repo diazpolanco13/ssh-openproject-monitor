@@ -43,7 +43,7 @@ sudo apt update && sudo apt install -y python3 python3-pip nodejs npm docker.io
 ### 2. Backend Flask
 ```bash
 cd /opt/ssh-monitor
-pip3 install flask flask-cors geoip2 requests folium
+pip3 install flask flask-cors geoip2 requests folium psutil
 ```
 
 ### 3. Frontend React
@@ -96,6 +96,7 @@ sudo systemctl start ssh-monitor.service
 
 ### Dashboard APIs
 - `GET /api/dashboard/data` - Datos completos del dashboard
+- `GET /api/server/status` - **⭐ NUEVO**: Estado del servidor en tiempo real
 - `GET /` - Dashboard Flask (puerto 8080)
 
 ## 🔧 Configuración
@@ -123,13 +124,16 @@ GENERATE_SOURCEMAP=false
 frontend/src/
 ├── components/
 │   ├── Dashboard.js         # Dashboard principal
-│   ├── Header.js           # Cabecera con título
+│   ├── Header.js           # Cabecera con título y versión
 │   ├── MetricCard.js       # Cards de métricas
+│   ├── ServerStatusSectionCompact.js # **⭐ NUEVO**: Estado del servidor en tiempo real
 │   ├── SSHSection.js       # Sección SSH
 │   ├── OpenProjectSection.js # Sección OpenProject ⭐
 │   ├── SecurityAlerts.js   # Alertas de seguridad
 │   ├── GeographicalMap.js  # Mapa geográfico
 │   └── SimpleGeoTest.js    # Test de geolocalización
+├── config/
+│   └── app.js              # **⭐ NUEVO**: Configuración y versionado
 ├── utils/
 │   └── leafletConfig.js    # Configuración mapas
 └── App.js                  # Aplicación principal
@@ -141,6 +145,32 @@ frontend/src/
 - **Estados visuales**: Conectado (verde) / Actividad Reciente (amarillo) / Inactivo (gris)
 - **Contadores precisos**: Total usuarios y conectados basados en datos reales
 - **Información geográfica**: IP y país solo para usuarios actualmente conectados
+
+### ServerStatusSectionCompact.js - **⭐ NUEVO** Sistema de Monitoreo en Tiempo Real
+- **Métricas del sistema reales**: CPU, memoria, disco y carga promedio usando `psutil`
+- **Estado de servicios de seguridad**: SSH, Fail2Ban, GeoIP, Firewall
+- **Información de Docker**: Contenedores corriendo vs total (OpenProject, PostgreSQL, Monitoring)
+- **Datos del sistema**: Tiempo de actividad real, conexiones activas, último respaldo
+- **Actualización automática**: Cada 30 segundos con datos en tiempo real
+- **Interfaz compacta**: Diseño optimizado para no sobrecargar el dashboard
+- **Sin datos simulados**: 100% información real del servidor
+
+#### Ejemplo de Datos Reales:
+```json
+{
+  "metrics": {
+    "cpu": {"value": 1.5, "status": "good"},
+    "memory": {"value": 48.6, "status": "good"},
+    "disk": {"value": 7.2, "status": "good"},
+    "load": {"value": 0.15, "status": "good"}
+  },
+  "uptime": "3d 5h",
+  "system": {
+    "docker": {"running": 6, "total": 8},
+    "activeConnections": 37
+  }
+}
+```
 
 ## 🛡️ Características de Seguridad
 
@@ -159,6 +189,16 @@ frontend/src/
 - ✅ **Phantom user detection**: Filtrado de usuarios fantasmas en logs
 
 ## 📊 Métricas y Alertas
+
+### Server Status Dashboard **⭐ NUEVO**
+- **CPU Usage**: Porcentaje de uso en tiempo real (con umbrales de alerta)
+- **Memory Usage**: Uso de memoria RAM con estado visual (verde/amarillo/rojo)
+- **Disk Usage**: Porcentaje de uso del disco principal
+- **Load Average**: Carga promedio del sistema
+- **System Uptime**: Tiempo de actividad real del servidor
+- **Docker Containers**: Monitoreo de contenedores críticos (OpenProject, PostgreSQL)
+- **Network Connections**: Conexiones de red activas
+- **Security Services**: Estado de SSH, Fail2Ban, GeoIP, Firewall
 
 ### SSH Dashboard
 - **Ataques Bloqueados**: Contador de intentos fallidos
@@ -184,7 +224,13 @@ journalctl (SSH logs) → Parser Python → Análisis GeoIP → APIs → Dashboa
 Docker logs → Parser Python → PostgreSQL Query → Filtrado → APIs → Dashboard
 ```
 
+### Pipeline Server Status **⭐ NUEVO**
+```
+psutil (System metrics) → Python APIs → JSON Response → React Component → Real-time Dashboard
+```
+
 ### Actualización Automática
+- **Estado del servidor**: Cada 30 segundos (datos reales)
 - **Alertas críticas**: Cada 30 segundos
 - **Dashboard general**: Cada 5 minutos
 - **Datos geográficos**: Cache 15 minutos
@@ -212,6 +258,15 @@ curl http://localhost:8080/api/openproject/users
 # Verificar logs OpenProject
 docker logs openproject | grep "user.*2"
 # Verificar consistencia DB vs logs activos
+```
+
+### Componente muestra "datos simulados" **⭐ SOLUCIONADO v3.1**
+```bash
+# Verificar API del servidor funciona
+curl http://localhost:8080/api/server/status
+# Verificar conexión React-Backend
+# URL completa configurada: http://45.137.194.210:8080/api/server/status
+# CORS habilitado en backend
 ```
 
 ## 📈 Estadísticas de Rendimiento
@@ -289,11 +344,16 @@ cd frontend && npm start
 **Desarrollador**: Carlos Diaz (@diazpolanco13)  
 **Proyecto**: SSH + OpenProject Monitor  
 **Repositorio**: ssh-openproject-monitor  
-**Versión**: 3.1 (Agosto 2025)
+**Versión**: 3.1 (Agosto 2025) - **Con datos reales del servidor**
+
+### 🌐 URLs de Acceso
+- **Dashboard React (Recomendado)**: http://45.137.194.210:3000/
+- **Dashboard Flask (Legacy)**: http://45.137.194.210:8080/
+- **API Backend**: http://45.137.194.210:8080/api/
 
 ---
 
-> 🔥 **Sistema probado en producción** con 19 usuarios activos y 97% de efectividad en bloqueo de ataques SSH.
+> 🔥 **Sistema probado en producción** con 19 usuarios activos, 97% de efectividad en bloqueo de ataques SSH y **monitoreo en tiempo real del servidor**.
 
 ### Servicio systemd
 ```bash
