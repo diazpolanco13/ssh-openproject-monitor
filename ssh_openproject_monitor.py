@@ -7,7 +7,7 @@ import socket
 import psutil
 import shutil
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 import geoip2.database
 import folium
@@ -865,6 +865,97 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
         logging.error(f"Error creating combined map: {e}")
         return "<p>Error generando mapa</p>"
 
+def create_enhanced_map(ssh_attacks, ssh_successful, openproject_access, active_ssh, active_web, active_layers):
+    """Create an enhanced map with layer controls and better visualizations"""
+    try:
+        m = folium.Map(location=[20, 0], zoom_start=2)
+        trusted_ips = load_trusted_ips()
+        
+        # Layer 1: Trusted IPs (IP Autorizada) - Special icon
+        if 'trustedIPs' in active_layers:
+            # Add trusted IPs with distinctive shield icon
+            all_ips = []
+            all_ips.extend([attack['ip'] for attack in ssh_attacks])
+            all_ips.extend([conn['ip'] for conn in ssh_successful])
+            all_ips.extend([session.get('remote_ip', session.get('ip', '')) for session in active_ssh.get('network_connections', [])])
+            all_ips.extend([session.get('ip', '') for session in active_ssh.get('user_sessions', [])])
+            
+            for ip in set(all_ips):
+                if ip in trusted_ips.get('ips', []):
+                    geo_info = get_geo_info(ip)
+                    if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                        folium.Marker(
+                            location=[geo_info['lat'], geo_info['lon']],
+                            popup=f"🛡️ IP AUTORIZADA<br>{ip}<br>📍 {geo_info['country']}<br>✅ Acceso confiable",
+                            icon=folium.Icon(color='blue', icon='shield', prefix='fa')
+                        ).add_to(m)
+        
+        # Layer 2: SSH Attacks (Atacantes) - Scalable red circles
+        if 'sshAttacks' in active_layers:
+            attack_counts = Counter()
+            for attack in ssh_attacks[-100:]:
+                geo_info = get_geo_info(attack['ip'])
+                if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                    attack_counts[(geo_info['lat'], geo_info['lon'], attack['ip'])] += 1
+            
+            for (lat, lon, ip), count in attack_counts.items():
+                if ip not in trusted_ips.get('ips', []):  # Don't show attacks from trusted IPs
+                    # Scale circle size by attack count (min 5, max 25)
+                    radius = min(max(count * 3, 5), 25)
+                    folium.CircleMarker(
+                        location=[lat, lon],
+                        radius=radius,
+                        popup=f"⚠️ ATACANTE SSH<br>IP: {ip}<br>Ataques: {count}<br>Tamaño = Frecuencia",
+                        color='darkred',
+                        fill=True,
+                        fillColor='red',
+                        fillOpacity=0.7,
+                        weight=2
+                    ).add_to(m)
+        
+        # Layer 3: OpenProject Clients (Datos simulados)
+        if 'openProject' in active_layers:
+            op_counts = Counter()
+            for access in openproject_access[-50:]:
+                if access.get('ip') and access['ip'] != 'unknown':
+                    geo_info = get_geo_info(access['ip'])
+                    if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                        op_counts[(geo_info['lat'], geo_info['lon'], access['ip'])] += 1
+            
+            for (lat, lon, ip), count in op_counts.items():
+                folium.CircleMarker(
+                    location=[lat, lon],
+                    radius=8,
+                    popup=f"👥 OpenProject<br>IP: {ip} (simulada)<br>Accesos: {count}<br>⚠️ Datos simulados",
+                    color='darkorange',
+                    fill=True,
+                    fillColor='orange',
+                    fillOpacity=0.6
+                ).add_to(m)
+        
+        # Layer 4: Web Connections (HTTPS)
+        if 'webConnections' in active_layers:
+            for conn in active_web:
+                geo_info = get_geo_info(conn['remote_ip'])
+                if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                    is_trusted = conn['remote_ip'] in trusted_ips.get('ips', [])
+                    if not is_trusted:  # Don't duplicate trusted IP markers
+                        folium.CircleMarker(
+                            location=[geo_info['lat'], geo_info['lon']],
+                            radius=6,
+                            popup=f"🌐 {conn['protocol']} Activa<br>IP: {conn['remote_ip']}<br>Puerto: {conn['remote_port']}",
+                            color='purple',
+                            fill=True,
+                            fillColor='purple',
+                            fillOpacity=0.8
+                        ).add_to(m)
+        
+        return m._repr_html_()
+        
+    except Exception as e:
+        logging.error(f"Error creating enhanced map: {e}")
+        return "<p>Error generando mapa mejorado</p>"
+
 @app.route('/')
 def dashboard():
     """Main dashboard page"""
@@ -1032,8 +1123,14 @@ def api_fail2ban():
 
 @app.route('/api/map')
 def api_map():
-    """API endpoint for the combined world map"""
+    """API endpoint for the combined world map with layer controls"""
     try:
+        # Get layer preferences from query parameters
+        active_layers = request.args.getlist('layers')
+        if not active_layers:
+            # Default layers
+            active_layers = ['trustedIPs', 'sshAttacks', 'webConnections']
+        
         ssh_entries = get_ssh_log_entries(24)
         op_entries, _ = get_openproject_logs(24)
         
@@ -1043,7 +1140,11 @@ def api_map():
         active_ssh = get_active_ssh_sessions()
         active_web = get_active_web_connections()
         
-        map_html = create_combined_map(ssh_attacks, ssh_successful, op_entries, active_ssh, active_web)
+        # Create map with selected layers
+        map_html = create_enhanced_map(
+            ssh_attacks, ssh_successful, op_entries, 
+            active_ssh, active_web, active_layers
+        )
         return jsonify({'map_html': map_html})
     except Exception as e:
         logging.error(f"Error in map API: {e}")

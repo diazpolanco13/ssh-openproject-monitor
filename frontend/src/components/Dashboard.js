@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import Header from './Header';
+import QuickStats from './QuickStats';
 import ServerStatusSectionCompact from './ServerStatusSectionCompact';
 import SSHSection from './SSHSection';
 import OpenProjectSection from './OpenProjectSection';
@@ -166,6 +167,9 @@ const Dashboard = () => {
       <Header />
       
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Estadísticas Rápidas */}
+        <QuickStats sshData={sshData} openProjectData={openProjectData} />
+
         {/* Estado del Servidor */}
         <div className="mb-8">
           <ServerStatusSectionCompact />
