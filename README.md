@@ -1,6 +1,26 @@
-# SSH + OpenProject Monitor Dashboard 🔐
+# SSH + OpenProject Monitor Dashboard 🔐 v3.1
 
-Sistema de monitoreo en tiempo real para seguridad SSH y actividad de usuarios OpenProject con arquitectura dual (Flask + React).
+Sistema de monitoreo en tiempo real para seguridad SSH y actividad de usuarios OpenProject con arquitectura dual (Flask + React) - **Ahora con Modo Oscuro Completo**.
+
+## 🆕 Novedades v3.1
+
+### 🌙 **Modo Oscuro Completo**
+- **Toggle dinámico**: Interruptor animado en la esquina superior derecha
+- **Persistencia**: El tema elegido se mantiene entre sesiones
+- **Transiciones suaves**: Animaciones fluidas al cambiar de modo
+- **Cobertura total**: Todos los componentes con soporte dark mode
+
+### 🔍 **SSH Monitoring Mejorado**
+- **Título actualizado**: "Monitoreo SSH (Últimas 24h)" para mayor claridad
+- **4ta métrica nueva**: "Conexiones Únicas" - cuenta IPs diferentes en 24h
+- **Detección diferenciada**: Distingue entre conexiones VSCode y Terminal
+- **Deduplicación inteligente**: Elimina conexiones duplicadas manteniendo tipos diferentes
+- **Información detallada**: Puertos específicos y tipos de conexión claramente identificados
+
+### ⚡ **Backend Optimizado**
+- **Endpoint /api/summary**: Métricas centralizadas para mejor rendimiento
+- **Session consolidation**: Lógica mejorada para consolidar sesiones SSH
+- **Unique IP tracking**: Seguimiento de direcciones IP únicas en tiempo real
 
 ## 🏗️ Arquitectura del Sistema
 
@@ -180,6 +200,9 @@ frontend/src/
 - ✅ **Geobloqueo**: Monitorea origen geográfico de ataques
 - ✅ **Whitelist**: Sistema de IPs confiables
 - ✅ **Rate limiting**: Detección de múltiples intentos por IP
+- ✅ **🆕 Conexiones diferenciadas**: Distingue VSCode (notty) vs Terminal (pts)
+- ✅ **🆕 IPs únicas**: Tracking de direcciones IP diferentes en 24h
+- ✅ **🆕 Deduplicación**: Evita duplicados manteniendo tipos de conexión
 
 ### Monitoreo OpenProject
 - ✅ **Usuarios activos**: Lista en tiempo real de usuarios conectados
@@ -189,6 +212,13 @@ frontend/src/
 - ✅ **Phantom user detection**: Filtrado de usuarios fantasmas en logs
 
 ## 📊 Métricas y Alertas
+
+### 🔐 SSH Monitoring Dashboard (Últimas 24h)
+- **🔴 Ataques Bloqueados**: Intentos de login fallidos detectados
+- **✅ Accesos Válidos**: Conexiones SSH exitosas autenticadas
+- **🟠 IPs Bloqueadas por Fail2ban**: Direcciones IP bloqueadas por el sistema
+- **🔵 🆕 Conexiones Únicas**: Número de IPs diferentes que se conectaron
+- **📋 Conexiones Activas**: Lista detallada con tipos de conexión (VSCode/Terminal)
 
 ### Server Status Dashboard **⭐ NUEVO**
 - **CPU Usage**: Porcentaje de uso en tiempo real (con umbrales de alerta)

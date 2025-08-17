@@ -282,10 +282,16 @@ def get_active_ssh_sessions():
     trusted_ips = load_trusted_ips()
     
     try:
-        # Get SSH network connections using netstat for SSH port 22
-        netstat_output = run_command("netstat -tn | grep ':22 ' | grep ESTABLISHED")
+        # Get SSH network connections using netstat for multiple SSH ports (22, 2234, 2222, etc.)
+        ssh_ports = ['22', '2234', '2222', '22222']  # Common SSH ports
+        all_connections = []
         
-        for line in netstat_output.split('\n'):
+        for port in ssh_ports:
+            netstat_output = run_command(f"netstat -tn | grep ':{port} ' | grep ESTABLISHED")
+            if netstat_output:
+                all_connections.extend(netstat_output.split('\n'))
+        
+        for line in all_connections:
             if line.strip() and 'ESTABLISHED' in line:
                 parts = line.split()
                 if len(parts) >= 5:
@@ -297,50 +303,158 @@ def get_active_ssh_sessions():
                         local_port = local_addr.split(':')[-1]
                         
                         if remote_ip not in ['127.0.0.1', '::1']:
-                            geo_info = get_geo_info(remote_ip)
-                            is_trusted = remote_ip in trusted_ips.get('ips', [])
-                            
-                            sessions_data['network_connections'].append({
-                                'remote_ip': remote_ip,
-                                'remote_port': remote_port,
-                                'local_port': local_port,
-                                'service': 'SSH',
-                                'country': geo_info['country'],
-                                'is_trusted': is_trusted,
-                                'connection_time': 'Activa'
-                            })
+                            # Check if this IP already has a user session (avoid duplicating)
+                            existing_user_session = any(s.get('ip') == remote_ip for s in sessions_data['user_sessions'])
+                            if not existing_user_session:
+                                geo_info = get_geo_info(remote_ip)
+                                is_trusted = remote_ip in trusted_ips.get('ips', [])
+                                
+                                sessions_data['network_connections'].append({
+                                    'remote_ip': remote_ip,
+                                    'remote_port': remote_port,
+                                    'local_port': local_port,
+                                    'service': 'SSH (Network)',
+                                    'country': geo_info['country'],
+                                    'is_trusted': is_trusted,
+                                    'connection_time': 'Activa'
+                                })
                     except Exception as e:
                         logging.error(f"Error parsing SSH connection: {e}")
                         continue
         
-        # Try to get user sessions from 'w' command
+        # Try to get user sessions from 'w' command and 'who' command
         w_output = run_command("w")
+        who_output = run_command("who")
+        
+        # Parse 'w' command output
         lines = w_output.split('\n')
         for line in lines[2:]:  # Skip header lines
             if line.strip() and not line.startswith('USER'):
                 parts = line.split()
-                if len(parts) >= 8:
+                if len(parts) >= 3:
                     user = parts[0]
                     tty = parts[1] if parts[1] != '' else 'notty'
-                    from_ip = parts[2] if parts[2] != '' else 'local'
+                    from_info = parts[2] if parts[2] != '' else 'local'
                     login_time = parts[3] if len(parts) > 3 else 'unknown'
+                    
+                    # Extract IP from various formats
+                    from_ip = from_info
+                    if ':' in from_info and '.' in from_info:
+                        # Format like "142.111.25.137:50234" 
+                        from_ip = from_info.split(':')[0]
                     
                     if re.match(r'^\d+\.\d+\.\d+\.\d+$', from_ip):
                         geo_info = get_geo_info(from_ip)
                         is_trusted = from_ip in trusted_ips.get('ips', [])
+                        
+                        # Determinar el tipo de conexión basado en el terminal
+                        connection_type = 'SSH'
+                        if tty == 'notty':
+                            connection_type = 'SSH (VSCode/SCP)'
+                        elif tty.startswith('pts/'):
+                            connection_type = 'SSH (Terminal)'
                         
                         sessions_data['user_sessions'].append({
                             'user': user,
                             'terminal': tty,
                             'login_time': login_time,
                             'ip': from_ip,
-                            'service': 'SSH',
+                            'service': connection_type,
                             'country': geo_info['country'],
-                            'is_trusted': is_trusted
+                            'is_trusted': is_trusted,
+                            'full_connection': from_info
                         })
         
-        total_connections = len(sessions_data['user_sessions']) + len(sessions_data['network_connections'])
-        logging.info(f"Active SSH sessions: {total_connections} total")
+        # Also try 'who' command for additional session info
+        who_lines = who_output.split('\n')
+        for line in who_lines:
+            if line.strip() and '(' in line and ')' in line:
+                # Format: "root     pts/0        2024-08-17 10:18 (142.111.25.137)"
+                parts = re.split(r'\s+', line.strip())
+                if len(parts) >= 4:
+                    user = parts[0]
+                    tty = parts[1]
+                    
+                    # Extract IP from parentheses
+                    ip_match = re.search(r'\(([^)]+)\)', line)
+                    if ip_match:
+                        from_ip = ip_match.group(1)
+                        
+                        # Extract time info
+                        time_match = re.search(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2})', line)
+                        login_time = time_match.group(1) if time_match else 'unknown'
+                        
+                        if re.match(r'^\d+\.\d+\.\d+\.\d+$', from_ip):
+                            # Check if this session is already added (avoid duplicates from w and who commands)
+                            session_key = f"{user}_{tty}_{from_ip}"
+                            existing = any(s.get('session_key') == session_key for s in sessions_data['user_sessions'])
+                            if not existing:
+                                geo_info = get_geo_info(from_ip)
+                                is_trusted = from_ip in trusted_ips.get('ips', [])
+                                
+                                # Determinar el tipo de conexión
+                                connection_type = 'SSH'
+                                if tty == 'notty':
+                                    connection_type = 'SSH (VSCode/SCP)'
+                                elif tty.startswith('pts/'):
+                                    connection_type = 'SSH (Terminal)'
+                                
+                                sessions_data['user_sessions'].append({
+                                    'user': user,
+                                    'terminal': tty,
+                                    'login_time': login_time,
+                                    'ip': from_ip,
+                                    'service': connection_type,
+                                    'country': geo_info['country'],
+                                    'is_trusted': is_trusted,
+                                    'session_key': session_key
+                                })
+        
+        # Consolidate sessions: merge user sessions with network connections
+        # Keep different types of connections separate even from same IP
+        consolidated_sessions = []
+        
+        # Add all user sessions (these are more detailed)
+        for user_session in sessions_data['user_sessions']:
+            consolidated_sessions.append({
+                'type': 'user_session',
+                'user': user_session['user'],
+                'terminal': user_session['terminal'],
+                'login_time': user_session['login_time'],
+                'ip': user_session['ip'],
+                'service': user_session['service'],
+                'country': user_session['country'],
+                'is_trusted': user_session['is_trusted'],
+                'connection_status': 'Activa',
+                'connection_id': f"{user_session['ip']}_{user_session['terminal']}_{user_session['user']}"
+            })
+        
+        # Add network connections that provide additional information
+        # Show network connections as separate entries to give complete view
+        for net_conn in sessions_data['network_connections']:
+            # Create a unique identifier for this network connection
+            net_id = f"{net_conn['remote_ip']}_port{net_conn['local_port']}_net"
+            
+            # Always add network connections but with clear labeling
+            # This helps show VSCode connections vs terminal connections
+            consolidated_sessions.append({
+                'type': 'network_connection',
+                'user': 'Network Port',
+                'terminal': f"port:{net_conn['remote_port']}→{net_conn['local_port']}",
+                'login_time': 'N/A',
+                'ip': net_conn['remote_ip'],
+                'service': net_conn['service'],
+                'country': net_conn['country'],
+                'is_trusted': net_conn['is_trusted'],
+                'connection_status': net_conn['connection_time'],
+                'remote_port': net_conn['remote_port'],
+                'connection_id': net_id
+            })
+        
+        # Update the return structure
+        sessions_data['consolidated_sessions'] = consolidated_sessions
+        total_connections = len(consolidated_sessions)
+        logging.info(f"Active SSH sessions: {total_connections} total (consolidated from {len(sessions_data['user_sessions'])} users + {len(sessions_data['network_connections'])} connections)")
         
     except Exception as e:
         logging.error(f"Error getting SSH sessions: {e}")
@@ -757,6 +871,11 @@ def api_summary():
         ssh_successful = [e for e in ssh_entries if e['type'] == 'success']
         total_ssh_active = len(active_ssh['user_sessions']) + len(active_ssh['network_connections'])
         
+        # Calculate unique IPs (for the 4th metric block)
+        unique_ips_attacks = len(set(e['ip'] for e in ssh_attacks))
+        unique_ips_successful = len(set(e['ip'] for e in ssh_successful))
+        unique_ips_total = len(set(e['ip'] for e in ssh_entries))
+        
         # OpenProject Data (new and improved)
         op_failed_logins = get_openproject_failed_logins(24)
         op_successful_logins = get_openproject_successful_logins(24)
@@ -770,6 +889,7 @@ def api_summary():
             'ssh_successful_logins': len(ssh_successful),
             'ssh_active_connections': total_ssh_active,
             'ssh_blocked_ips': len(fail2ban_data['banned_ips']),
+            'ssh_unique_ips': unique_ips_total,  # New metric for 4th block
             
             # OpenProject Application Monitoring (24h)
             'op_failed_logins': len(op_failed_logins),

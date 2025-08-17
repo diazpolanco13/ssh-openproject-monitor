@@ -13,7 +13,8 @@ const Dashboard = () => {
     attacks: 0,
     successfulLogins: 0,
     blockedIPs: 0,
-    geoData: []
+    geoData: [],
+    activeSessions: { user_sessions: [], network_connections: [] }
   });
 
   const [openProjectData, setOpenProjectData] = useState({
@@ -67,16 +68,21 @@ const Dashboard = () => {
   const fetchSSHData = async () => {
     try {
       console.log('📡 Fetching SSH data...');
-      const [sshAttacks, sshSuccess] = await Promise.all([
-        axios.get(`${API_BASE}/api/ssh/attacks`),
-        axios.get(`${API_BASE}/api/ssh/successful`)
+      const [sshActive, summaryData] = await Promise.all([
+        axios.get(`${API_BASE}/api/ssh/active`),
+        axios.get(`${API_BASE}/api/summary`)
       ]);
 
+      console.log('🔐 SSH Active Sessions received:', sshActive.data);
+      console.log('📊 Summary data received:', summaryData.data);
+
       setSshData({
-        attacks: Array.isArray(sshAttacks.data) ? sshAttacks.data.length : 0,
-        successfulLogins: Array.isArray(sshSuccess.data) ? sshSuccess.data.length : 0,
-        blockedIPs: 0,
-        geoData: []
+        attacks: summaryData.data.ssh_failed_logins || 0,
+        successfulLogins: summaryData.data.ssh_successful_logins || 0,
+        blockedIPs: summaryData.data.ssh_blocked_ips || 0,
+        uniqueIPs: summaryData.data.ssh_unique_ips || 0,
+        geoData: [],
+        activeSessions: sshActive.data || { user_sessions: [], network_connections: [] }
       });
     } catch (err) {
       console.error('Error fetching SSH data:', err);
