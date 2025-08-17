@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Database, UserCheck, UserX, RefreshCw, Activity } from 'lucide-react';
+import { Users, Database, UserCheck, UserX, RefreshCw, Activity, Globe } from 'lucide-react';
 
 const OpenProjectSection = ({ data, onRefresh }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -78,42 +78,73 @@ const OpenProjectSection = ({ data, onRefresh }) => {
           </div>
         </div>
 
-        {/* Lista de usuarios */}
+        {/* Lista única de usuarios con IP, país y conexión */}
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">
-            Usuarios del Sistema
+            Lista de Usuarios OpenProject
           </h3>
-          <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-            {data.users && data.users.length > 0 ? (
+          <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+            {data.activeConnections && data.activeConnections.length > 0 ? (
               <div className="space-y-2">
-                {data.users.map((user, index) => (
-                  <div key={user.id || index} className="flex items-center justify-between py-2 px-3 bg-white rounded border">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-medium text-sm">
-                          {user.display_name ? user.display_name.charAt(0).toUpperCase() : 'U'}
+                {data.activeConnections.map((user, index) => {
+                  // Buscar el usuario real en la base de datos
+                  const realUser = data.users?.find(u => u.id === parseInt(user.user_id));
+                  const displayName = realUser?.display_name || `Usuario ${user.user_id}`;
+                  const lastLogin = realUser?.last_login;
+                  
+                  // Formatear la fecha de última conexión
+                  const formatLastLogin = (dateStr) => {
+                    if (!dateStr) return 'Sin conexión previa';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('es-ES', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+                  };
+
+                  return (
+                    <div key={user.user_id || index} className="flex items-center justify-between py-3 px-4 bg-white rounded border">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-green-600 font-bold text-sm">
+                            {displayName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {displayName}
+                          </p>
+                          <div className="flex items-center space-x-3 text-xs text-gray-600">
+                            <span className={`px-2 py-1 rounded-full font-medium ${
+                              user.is_trusted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {user.ip}
+                            </span>
+                            <span className="flex items-center space-x-1">
+                              <Globe className="h-3 w-3" />
+                              <span className="font-medium">{user.country}</span>
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Última conexión: {formatLastLogin(lastLogin)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium">
+                          Activo Ahora
                         </span>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.display_name || 'Usuario'}
-                        </p>
-                        <p className="text-xs text-gray-500">{user.login || user.email}</p>
-                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        user.last_login ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {user.last_login ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No hay usuarios disponibles
+              <p className="text-sm text-gray-500 text-center py-8">
+                No hay usuarios activos conectados
               </p>
             )}
           </div>

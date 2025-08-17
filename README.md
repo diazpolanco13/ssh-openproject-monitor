@@ -12,16 +12,21 @@ Dashboard en tiempo real para monitoreo de seguridad SSH y actividad de usuarios
 - Monitoreo de sesiones activas
 
 ### 👥 Monitoreo OpenProject
-- Seguimiento de usuarios conectados
-- Historial de actividad por usuario
-- Integración con logs del sistema
+- Lista de usuarios conectados con nombres reales
+- Direcciones IP y países de conexión
+- Fecha y hora de última conexión
+- Estado de conexión en tiempo real
+- Identificación de IPs confiables vs no confiables
+- Integración con base de datos de usuarios
 
 ### 📊 Dashboard Web
-- Interfaz en tiempo real
-- Mapas interactivos con Folium
+- Interfaz React moderna y responsiva
+- Dashboard híbrido (Python Flask + React frontend)
+- Mapas interactivos con Folium embebidos en React
 - APIs RESTful para datos en JSON
-- Visualización de estadísticas
-- Geolocalización de IPs
+- Actualización automática inteligente (5min alertas, 15min dashboard)
+- Visualización en tiempo real de usuarios activos
+- Geolocalización automática de IPs con GeoLite2
 
 ## Instalación
 

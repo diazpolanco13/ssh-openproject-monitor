@@ -34,22 +34,41 @@ Monitorear la seguridad del servidor que ejecuta OpenProject, proporcionando vis
 │                                   │                          │
 │                                   ▼                          │
 │  ┌─────────────────────────────────────────────────────────┐ │
-│  │         DASHBOARD MONITOR (Puerto 8080)                 │ │
+│  │         BACKEND FLASK (Puerto 8080)                     │ │
 │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐ │ │
-│  │  │  SSH Parser │ │ OP Parser   │ │   Flask Web App     │ │ │
+│  │  │  SSH Parser │ │ OP Parser   │ │   APIs REST         │ │ │
 │  │  │             │ │             │ │                     │ │ │
-│  │  │ journalctl  │ │ docker logs │ │  /api/attacks       │ │ │
-│  │  │ | grep sshd │ │ openproject │ │  /api/sessions      │ │ │
-│  │  │             │ │             │ │  /api/openproject   │ │ │
-│  │  └─────────────┘ └─────────────┘ │  /api/trusted-ips   │ │ │
-│  │                                  │  /                  │ │ │
+│  │  │ journalctl  │ │ docker logs │ │  /api/openproject/  │ │ │
+│  │  │ | grep sshd │ │ + postgres  │ │     users           │ │ │
+│  │  │             │ │             │ │     connections     │ │ │
+│  │  └─────────────┘ └─────────────┘ │     users-db        │ │ │
+│  │                                  │  /api/map           │ │ │
 │  │  ┌─────────────────────────────────────────────────────┐ │ │
-│  │  │           GeoIP Database                            │ │ │
+│  │  │           GeoIP + Folium Maps                       │ │ │
 │  │  │         (GeoLite2-City.mmdb)                        │ │ │
 │  │  └─────────────────────────────────────────────────────┘ │ │
 │  └─────────────────────────────────────────────────────────┘ │
+│                                   │                          │
+│                                   ▼                          │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │         FRONTEND REACT (Puerto 3000)                   │ │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐ │ │
+│  │  │ Dashboard   │ │ SSH Section │ │ OpenProject Section │ │ │
+│  │  │ Component   │ │             │ │                     │ │ │
+│  │  │             │ │ - Alerts    │ │ - Users reales      │ │ │
+│  │  │ - Stats     │ │ - Sessions  │ │ - IPs y países      │ │ │
+│  │  │ - Map (HTML)│ │ - Map data  │ │ - Última conexión   │ │ │
+│  │  └─────────────┘ └─────────────┘ └─────────────────────┘ │ │
+│  └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### 🔗 ARQUITECTURA HÍBRIDA (Flask + React)
+- **Backend**: Python Flask (puerto 8080) - APIs y generación de mapas Folium
+- **Frontend**: React (puerto 3000) - Interfaz moderna con componentes especializados
+- **Maps**: Folium (Python) genera HTML embebido en React via dangerouslySetInnerHTML
+- **Data Flow**: React consume APIs Flask, combina datos de múltiples endpoints
+- **Updates**: Intervalos inteligentes (5min alertas SSH, 15min datos OpenProject)
 
 ### 📁 ESTRUCTURA DEL PROYECTO
 
@@ -150,16 +169,21 @@ curl http://localhost:8080
 #### **APIs Disponibles:**
 - **GET /api/attacks**: Lista ataques SSH detectados con geolocalización
 - **GET /api/sessions**: Sesiones SSH activas actuales
-- **GET /api/openproject**: Usuarios conectados a OpenProject  
+- **GET /api/openproject/users**: Usuarios activos con IP, país y actividad
+- **GET /api/openproject/users-db**: Usuarios registrados en base de datos
+- **GET /api/openproject/connections**: Conexiones web activas a OpenProject
 - **GET /api/trusted-ips**: Lista IPs marcadas como confiables
-- **GET /**: Dashboard web principal con mapas
+- **GET /api/map**: Mapa HTML combinado con marcadores geográficos
+- **GET /**: Dashboard React con interfaz moderna
 
 #### **Datos que Procesa:**
 1. **SSH Failed Logins**: Extrae IP, usuario, timestamp de intentos fallidos
 2. **SSH Successful Sessions**: Identifica conexiones exitosas activas
-3. **OpenProject Users**: Parsea logs de Docker para usuarios conectados
-4. **Geolocation**: Convierte IPs a coordenadas geográficas
-5. **Trust Status**: Clasifica IPs como confiables/sospechosas
+3. **OpenProject Active Users**: Combina logs de actividad con datos de usuarios reales
+4. **User Connection Details**: IP, país, nombre real, última conexión
+5. **Geolocation**: Convierte IPs a coordenadas geográficas con GeoLite2
+6. **Trust Status**: Clasifica IPs como confiables/sospechosas
+7. **Real-time Updates**: Dashboard con intervalos inteligentes (5min alertas, 15min datos)
 
 ### 🐛 DEBUGGING Y TROUBLESHOOTING
 

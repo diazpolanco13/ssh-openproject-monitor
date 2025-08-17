@@ -31,15 +31,23 @@ const Dashboard = () => {
   const API_BASE = 'http://localhost:8080';
 
   useEffect(() => {
+    console.log('🚀 Dashboard useEffect ejecutado - SOLO debe ocurrir UNA VEZ al cargar');
     fetchDashboardData();
     
     // Dashboard completo cada 15 minutos
-    const dashboardInterval = setInterval(fetchDashboardData, 900000); // 15 minutos
+    const dashboardInterval = setInterval(() => {
+      console.log('⏰ Ejecutando actualización Dashboard completa:', new Date().toLocaleTimeString());
+      fetchDashboardData();
+    }, 900000); // 15 minutos
     
     // Alertas críticas cada 5 minutos
-    const alertsInterval = setInterval(fetchSecurityAlerts, 300000); // 5 minutos
+    const alertsInterval = setInterval(() => {
+      console.log('🚨 Ejecutando actualización alertas críticas:', new Date().toLocaleTimeString());
+      fetchSecurityAlerts();
+    }, 300000); // 5 minutos
     
     return () => {
+      console.log('🧹 Dashboard cleanup - removiendo intervalos');
       clearInterval(dashboardInterval);
       clearInterval(alertsInterval);
     };
@@ -58,6 +66,7 @@ const Dashboard = () => {
 
   const fetchSSHData = async () => {
     try {
+      console.log('📡 Fetching SSH data...');
       const [sshAttacks, sshSuccess] = await Promise.all([
         axios.get(`${API_BASE}/api/ssh/attacks`),
         axios.get(`${API_BASE}/api/ssh/successful`)
@@ -76,19 +85,23 @@ const Dashboard = () => {
 
   const fetchOpenProjectData = async () => {
     try {
-      const [opUsers, opActive, opFailed, opSuccess] = await Promise.all([
+      console.log('📡 Fetching OpenProject data...');
+      const [opUsers, opUsersDb, opFailed, opSuccess, opConnections] = await Promise.all([
+        axios.get(`${API_BASE}/api/openproject/users`),
         axios.get(`${API_BASE}/api/openproject/users-db`),
-        axios.get(`${API_BASE}/api/openproject/active-users`),
         axios.get(`${API_BASE}/api/openproject/failed-logins`),
-        axios.get(`${API_BASE}/api/openproject/successful-logins`)
+        axios.get(`${API_BASE}/api/openproject/successful-logins`),
+        axios.get(`${API_BASE}/api/openproject/connections`)
       ]);
 
       setOpenProjectData({
-        totalUsers: Array.isArray(opUsers.data) ? opUsers.data.length : 0,
-        activeUsers: Array.isArray(opActive.data) ? opActive.data.length : 0,
+        totalUsers: Array.isArray(opUsersDb.data) ? opUsersDb.data.length : 0,
+        activeUsers: Array.isArray(opUsers.data) ? opUsers.data.length : 0,
         failedLogins: Array.isArray(opFailed.data) ? opFailed.data.length : 0,
         successfulLogins: Array.isArray(opSuccess.data) ? opSuccess.data.length : 0,
-        users: Array.isArray(opUsers.data) ? opUsers.data : []
+        users: Array.isArray(opUsersDb.data) ? opUsersDb.data : [],
+        activeConnections: Array.isArray(opUsers.data) ? opUsers.data : [],
+        webConnections: Array.isArray(opConnections.data) ? opConnections.data : []
       });
     } catch (err) {
       console.error('Error fetching OpenProject data:', err);
