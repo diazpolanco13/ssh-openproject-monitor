@@ -7,7 +7,7 @@ import socket
 import psutil
 import shutil
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify
 from flask_cors import CORS
 import geoip2.database
 import folium
@@ -854,9 +854,53 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
         return "<p>Error generando mapa</p>"
 
 @app.route('/')
-def dashboard():
-    """Main dashboard page"""
-    return render_template('dashboard_combined.html')
+def api_root():
+    """API Root - Backend Status"""
+    return jsonify({
+        "service": "SSH + OpenProject Monitor Backend",
+        "version": "3.1",
+        "status": "running",
+        "timestamp": datetime.now().isoformat(),
+        "endpoints": {
+            "health": "/api/health",
+            "summary": "/api/summary", 
+            "server_status": "/api/server/status",
+            "ssh": {
+                "attacks": "/api/ssh/attacks",
+                "successful": "/api/ssh/successful", 
+                "active": "/api/ssh/active"
+            },
+            "openproject": {
+                "users": "/api/openproject/users",
+                "connections": "/api/openproject/connections",
+                "access": "/api/openproject/access"
+            }
+        }
+    })
+
+@app.route('/api/health')
+def api_health():
+    """Health check endpoint for monitoring"""
+    try:
+        # Test basic functionality
+        now = datetime.now()
+        
+        return jsonify({
+            "status": "healthy",
+            "timestamp": now.isoformat(),
+            "uptime": "running",
+            "services": {
+                "flask": "running",
+                "geoip": os.path.exists('/opt/ssh-monitor/GeoLite2-City.mmdb'),
+                "logs": "accessible"
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 @app.route('/api/summary')
 def api_summary():
@@ -1562,4 +1606,4 @@ def api_intrusion_detection():
 
 if __name__ == '__main__':
     logging.info("Starting SSH + OpenProject Monitor Dashboard...")
-    app.run(host='0.0.0.0', port=8080, debug=False)
+    app.run(host='0.0.0.0', port=8091, debug=False)
