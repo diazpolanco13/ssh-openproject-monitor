@@ -12,7 +12,7 @@ const Header = () => {
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
-              <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              <Shield className="h-8 w-8 text-primary-600 dark:text-primary-400" />
               <Server className="h-8 w-8 text-gray-600 dark:text-gray-400" />
             </div>
             <div>
@@ -33,7 +33,7 @@ const Header = () => {
             </div>
             <div className="flex items-center space-x-2">
               <div className="h-3 w-3 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-600 dark:text-gray-300">En línea</span>
+              <span className="text-sm text-gray-600">En línea</span>
             </div>
           </div>
         </div>
