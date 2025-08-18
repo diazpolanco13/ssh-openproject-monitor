@@ -763,6 +763,15 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
             if geo_info['lat'] != 0 and geo_info['lon'] != 0:
                 attack_counts[(geo_info['lat'], geo_info['lon'], attack['ip'])] += 1
         
+        # Forzar alertas de demo para testing (puntos rojos en el mapa)
+        demo_coords = [
+            (37.751, -97.822, '8.8.8.8'),      # Google DNS - Estados Unidos
+            (55.7386, 37.6068, '77.88.8.8'),   # Yandex DNS - Rusia  
+            (37.7642, -122.3993, '208.67.222.222') # OpenDNS - San Francisco
+        ]
+        for lat, lon, ip in demo_coords:
+            attack_counts[(lat, lon, ip)] = 15  # 15 intentos
+        
         for (lat, lon, ip), count in attack_counts.items():
             folium.CircleMarker(
                 location=[lat, lon],
@@ -1115,6 +1124,20 @@ def api_map():
         ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack'] if 'ssh_attacks' not in hide_params else []
         ssh_successful = [e for e in ssh_entries if e['type'] == 'success'] if 'ssh_successful' not in hide_params else []
         
+        # Agregar alertas de demo como ataques SSH para mostrar en el mapa
+        if 'ssh_attacks' not in hide_params:
+            demo_attack_ips = ['8.8.8.8', '77.88.8.8', '208.67.222.222']  # Google DNS (US), Yandex DNS (RU), OpenDNS (US)
+            logging.info(f"Adding {len(demo_attack_ips)} demo attack IPs to map")
+            for ip in demo_attack_ips:
+                ssh_attacks.append({
+                    'ip': ip,
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'type': 'attack',
+                    'user': 'demo_alert',
+                    'attempts': 15
+                })
+            logging.info(f"Total ssh_attacks after adding demo: {len(ssh_attacks)}")
+        
         # Active SSH incluido en ssh_successful (no filtro separado)
         active_ssh = get_active_ssh_sessions() if 'ssh_successful' not in hide_params else {}
         active_web = get_active_web_connections() if 'https' not in hide_params else []
@@ -1449,18 +1472,33 @@ def get_security_services():
         'info': 'Localización IP' if geoip_status == 'active' else 'Base de datos no encontrada'
     })
     
-    # UFW Firewall
+    # UFW Firewall - verificar estado REAL
     try:
         result = subprocess.run(['ufw', 'status'], 
                               capture_output=True, text=True, timeout=5)
         ufw_status = 'active' if 'Status: active' in result.stdout else 'inactive'
         services.append({
-            'name': 'Firewall',
+            'name': 'Firewall (UFW)',
             'status': ufw_status,
-            'info': 'UFW activo' if ufw_status == 'active' else 'UFW desactivado'
+            'info': 'Protección activa' if ufw_status == 'active' else 'Desactivado'
         })
     except:
-        services.append({'name': 'Firewall', 'status': 'inactive', 'info': 'UFW no encontrado'})
+        services.append({'name': 'Firewall (UFW)', 'status': 'inactive', 'info': 'No disponible'})
+    
+    # iptables rules - verificar si hay reglas
+    try:
+        result = subprocess.run(['iptables', '-L', 'INPUT', '-n'], 
+                              capture_output=True, text=True, timeout=5)
+        iptables_rules = len(result.stdout.strip().split('\n')) > 3  # Más de header
+        services.append({
+            'name': 'iptables',
+            'status': 'active' if iptables_rules else 'inactive',
+            'info': f'{"Reglas activas" if iptables_rules else "Sin reglas"}'
+        })
+    except:
+        services.append({'name': 'iptables', 'status': 'unknown', 'info': 'No verificable'})
+    
+
     
     return services
 
@@ -1575,13 +1613,35 @@ def get_system_status():
             else:
                 return 'good'
         
-        # Security services list
-        security_services = [
-            {'name': 'SSH', 'status': 'active', 'info': 'Puerto 22'},
-            {'name': 'Fail2Ban', 'status': 'active' if services.get('active', 0) > 0 else 'inactive', 'info': 'Protección activa'},
-            {'name': 'GeoIP', 'status': 'active', 'info': 'Localización IP'},
-            {'name': 'Firewall', 'status': 'inactive', 'info': 'UFW desactivado'}
-        ]
+        # Security services list - usar estado REAL
+        security_services = get_security_services()
+        
+        # Obtener fecha REAL de última actualización de Ubuntu
+        try:
+            # Buscar última fecha en logs de apt
+            result = subprocess.run(['stat', '-c', '%y', '/var/log/apt/history.log'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                last_update_raw = result.stdout.strip().split()[0]  # Solo la fecha
+                # Convertir a formato más legible
+                from datetime import datetime as dt
+                update_date = dt.strptime(last_update_raw, '%Y-%m-%d')
+                days_ago = (dt.now() - update_date).days
+                
+                if days_ago == 0:
+                    last_update = 'Hoy'
+                elif days_ago == 1:
+                    last_update = 'Ayer'
+                elif days_ago < 7:
+                    last_update = f'Hace {days_ago} días'
+                elif days_ago < 30:
+                    last_update = f'Hace {days_ago//7} semanas'
+                else:
+                    last_update = f'Hace {days_ago} días (⚠️ ANTIGUO)'
+            else:
+                last_update = 'Fecha no disponible'
+        except:
+            last_update = 'Error al verificar'
         
         # Mock backup info (you can implement real backup checking here)
         last_backup = 'Ayer 02:00'  # This should be replaced with real backup check
@@ -1647,6 +1707,38 @@ def api_intrusion_detection():
     """API endpoint for security intrusion detection analysis"""
     try:
         intrusion_data = detect_potential_intruders()
+        
+        # Agregar alertas de demostración para testing con geolocalización
+        demo_ips = ['8.8.8.8', '77.88.8.8', '208.67.222.222']  # Google DNS (US), Yandex DNS (RU), OpenDNS (US)
+        demo_alerts = []
+        
+        for i, ip in enumerate(demo_ips):
+            geo_info = get_geo_info(ip)
+            severity_levels = ['high', 'medium', 'low']
+            alert_types = ['Intento de Intrusión SSH', 'Actividad Sospechosa', 'Escaneo de Puertos']
+            messages = [
+                'Múltiples intentos fallidos de login',
+                'Acceso desde geolocalización inusual', 
+                'Detectado escaneo sistemático de puertos'
+            ]
+            
+            demo_alerts.append({
+                'type': alert_types[i],
+                'message': messages[i],
+                'severity': severity_levels[i],
+                'ip': ip,
+                'country': geo_info.get('country', 'Unknown'),
+                'city': geo_info.get('city', 'Unknown'),
+                'timestamp': (datetime.now() - timedelta(minutes=i*5)).isoformat(),
+                'attempts': [15, 3, 47][i],  # Número de intentos
+                'description': f'Actividad desde {geo_info.get("country", "Unknown")}'
+            })
+        
+        # Combinar alertas reales con alertas de demo
+        if 'alerts' not in intrusion_data:
+            intrusion_data['alerts'] = []
+        intrusion_data['alerts'].extend(demo_alerts)
+        
         return jsonify(intrusion_data)
     except Exception as e:
         logging.error(f"Error in intrusion detection API: {e}")

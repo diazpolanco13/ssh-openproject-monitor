@@ -5,6 +5,7 @@ import ServerStatusSectionCompact from './ServerStatusSectionCompact';
 import SSHSection from './SSHSection';
 import OpenProjectSection from './OpenProjectSection';
 import GeographicalMap from './GeographicalMap';
+import SecurityAlerts from './SecurityAlerts';
 
 const Dashboard = () => {
   const [sshData, setSshData] = useState({
@@ -59,7 +60,10 @@ const Dashboard = () => {
     try {
       console.log('Actualizando alertas críticas:', new Date().toLocaleTimeString());
       const alertsResponse = await axios.get(`${API_BASE}/api/security/intrusion-detection`);
-      setSecurityAlerts(Array.isArray(alertsResponse.data) ? alertsResponse.data : []);
+      // Extraer el array de alertas de la respuesta
+      const alertsData = alertsResponse.data?.alerts || [];
+      setSecurityAlerts(Array.isArray(alertsData) ? alertsData : []);
+      console.log('🚨 Alertas cargadas:', alertsData.length);
     } catch (alertError) {
       console.warn('Security alerts not available:', alertError);
       setSecurityAlerts([]);
@@ -171,19 +175,7 @@ const Dashboard = () => {
         </div>
 
         {/* Alertas de seguridad */}
-        {securityAlerts.length > 0 && (
-          <div className="mb-8">
-            {/* SecurityAlerts component placeholder */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4">
-              <h3 className="text-lg font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-                🚨 Alertas de Seguridad ({securityAlerts.length})
-              </h3>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                SecurityAlerts component - por migrar
-              </p>
-            </div>
-          </div>
-        )}
+        <SecurityAlerts alerts={securityAlerts} />
 
         {/* Secciones principales */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

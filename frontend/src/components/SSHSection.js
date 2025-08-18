@@ -60,7 +60,7 @@ const SSHSection = ({ data, onRefresh }) => {
           <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-700/50 transition-colors duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">IPs Bloqueadas por Fail2ban</p>
+                <p className="text-sm text-orange-700 dark:text-orange-300 font-medium">IPs Bloqueadas</p>
                 <p className="text-lg font-bold text-orange-900 dark:text-orange-200">{data.blockedIPs}</p>
               </div>
               <div className="flex items-center space-x-2">

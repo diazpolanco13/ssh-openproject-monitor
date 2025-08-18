@@ -1,6 +1,7 @@
 {
     "ips": [
         "142.111.25.137",
+        "190.205.115.82",
         "192.168.1.1",
         "127.0.0.1",
         "localhost"
@@ -8,10 +9,17 @@
     "trusted_ips": [
         {
             "ip": "142.111.25.137",
-            "description": "VPN Fija Personal",
-            "location": "VPN Server",
+            "description": "IP Oficina - Trabajo",
+            "location": "Oficina Principal",
             "user": "root",
-            "device": "Conexión Principal"
+            "device": "Conexión Oficina"
+        },
+        {
+            "ip": "190.205.115.82",
+            "description": "IP de Emergencia",
+            "location": "Conexión Backup",
+            "user": "root",
+            "device": "Acceso de Emergencia"
         },
         {
             "ip": "192.168.1.0/24",
@@ -20,7 +28,8 @@
         }
     ],
     "computer_names": {
-        "142.111.25.137": "🔐 VPN Personal",
+        "142.111.25.137": "🏢 Oficina Trabajo",
+        "190.205.115.82": "🆘 Emergencia",
         "localhost": "🏠 Local",
         "127.0.0.1": "🏠 Local"
     }

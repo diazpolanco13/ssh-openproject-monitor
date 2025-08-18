@@ -6,6 +6,21 @@ const SecurityAlerts = ({ alerts }) => {
     return null;
   }
 
+  // Agrupar alertas por país para manejo de volumen
+  const groupedAlerts = alerts.reduce((acc, alert) => {
+    const country = alert.country || 'Unknown';
+    if (!acc[country]) {
+      acc[country] = [];
+    }
+    acc[country].push(alert);
+    return acc;
+  }, {});
+
+  // Ordenar países por número de alertas (más ataques primero)
+  const sortedCountries = Object.entries(groupedAlerts)
+    .sort(([,a], [,b]) => b.length - a.length)
+    .slice(0, 5); // Mostrar solo top 5 países
+
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
       case 'high':
@@ -48,36 +63,71 @@ const SecurityAlerts = ({ alerts }) => {
         </div>
 
         <div className="p-6">
-          <div className="space-y-4">
-            {alerts.slice(0, 10).map((alert, index) => (
+          {/* Resumen por países */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              🌍 Top Países Atacantes (últimas 24h)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {sortedCountries.map(([country, countryAlerts]) => {
+                const totalAttempts = countryAlerts.reduce((sum, alert) => sum + (alert.attempts || 1), 0);
+                const highSeverity = countryAlerts.filter(a => a.severity === 'high').length;
+                
+                return (
+                  <div key={country} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        🌍 {country}
+                      </span>
+                      {highSeverity > 0 && (
+                        <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs px-2 py-0.5 rounded">
+                          {highSeverity} críticos
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      <span className="font-medium">{totalAttempts}</span> intentos • 
+                      <span className="ml-1">{countryAlerts.length} IPs únicas</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Alertas más recientes (compactas) */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              🚨 Últimas Alertas Críticas
+            </h3>
+            {alerts.slice(0, 5).map((alert, index) => (
               <div 
                 key={index} 
-                className={`border rounded-lg p-4 transition-colors duration-200 ${getSeverityColor(alert.severity)}`}
+                className={`border rounded-lg p-3 transition-colors duration-200 ${getSeverityColor(alert.severity)}`}
               >
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
                     {getSeverityIcon(alert.severity)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {alert.type || 'Alerta de Seguridad'}
-                      </p>
-                      <span className={`px-2 py-1 text-xs rounded-full ${getSeverityColor(alert.severity)}`}>
-                        {alert.severity?.toUpperCase() || 'MEDIUM'}
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {alert.type}
                       </span>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        <span className="font-mono">{alert.ip}</span> • 
+                        <span className="ml-1">🌍 {alert.country}, {alert.city}</span> • 
+                        <span className="ml-1">{alert.attempts || 1} intentos</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                      {alert.message || alert.description || 'Actividad sospechosa detectada'}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                      <span>IP: {alert.ip || 'No disponible'}</span>
-                      <span>
-                        {alert.timestamp 
-                          ? new Date(alert.timestamp).toLocaleString('es-ES')
-                          : 'Tiempo no disponible'
-                        }
-                      </span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`px-2 py-1 text-xs rounded-full ${getSeverityColor(alert.severity)}`}>
+                      {alert.severity?.toUpperCase()}
+                    </span>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {alert.timestamp 
+                        ? new Date(alert.timestamp).toLocaleTimeString('es-ES')
+                        : 'Tiempo no disponible'
+                      }
                     </div>
                   </div>
                 </div>
@@ -85,10 +135,10 @@ const SecurityAlerts = ({ alerts }) => {
             ))}
           </div>
           
-          {alerts.length > 10 && (
+          {alerts.length > 5 && (
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Mostrando 10 de {alerts.length} alertas
+                Mostrando 5 alertas más recientes de {alerts.length} total
               </p>
             </div>
           )}

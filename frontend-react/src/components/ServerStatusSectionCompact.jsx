@@ -21,15 +21,15 @@ const MetricCard = ({ title, value, unit = '', status = 'normal', icon: Icon }) 
   };
 
   return (
-    <div className={`p-4 border rounded-lg transition-colors duration-200 ${getStatusColor()}`}>
+    <div className={`p-4 border rounded-lg transition-all duration-500 ${getStatusColor()}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{title}</p>
-          <p className="text-2xl font-bold">
+          <p className="text-2xl font-bold transition-all duration-300">
             {value}<span className="text-lg font-normal ml-1">{unit}</span>
           </p>
         </div>
-        <div className="text-3xl">
+        <div className="text-3xl transition-colors duration-300">
           {Icon && <Icon className="w-8 h-8" />}
         </div>
       </div>
@@ -41,10 +41,16 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
   const [serverData, setServerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const fetchServerStatus = async () => {
+  const fetchServerStatus = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      // Solo mostrar loading en la carga inicial
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setIsUpdating(true);
+      }
       
       const apiUrl = window.location.hostname === 'localhost' 
         ? 'http://45.137.194.210:8091/api/server/status'
@@ -61,13 +67,18 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
       console.error('Error fetching server status:', err);
       setError(`Error conectando con el servidor: ${err.message}`);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        // Pequeño delay para mostrar la transición suave
+        setTimeout(() => setIsUpdating(false), 500);
+      }
     }
   };
 
   useEffect(() => {
-    fetchServerStatus();
-    const interval = setInterval(fetchServerStatus, 30000); // Actualizar cada 30 segundos
+    fetchServerStatus(true); // Carga inicial con loading
+    const interval = setInterval(() => fetchServerStatus(false), 30000); // Actualizaciones sin loading
     return () => clearInterval(interval);
   }, []);
 
@@ -97,10 +108,18 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow transition-colors duration-200">
+    <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow transition-all duration-500 ${isUpdating ? 'ring-2 ring-blue-300 dark:ring-blue-500' : ''}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Estado del Servidor (Tiempo Real)</h2>
+        <div className="flex items-center space-x-3">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Estado del Servidor (Tiempo Real)</h2>
+          {isUpdating && (
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Actualizando...</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center space-x-4">
           <div className="text-sm text-gray-500 dark:text-gray-400">Tiempo activo: {serverData.uptime}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">Actualizado: {serverData.lastUpdate}</div>
