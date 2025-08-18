@@ -26,8 +26,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Usar el mismo puerto que nuestro backend Flask
-  const API_BASE = 'http://localhost:8091';
+  // Configuración inteligente de API URL
+  const API_BASE = window.location.hostname === 'localhost' 
+    ? 'http://45.137.194.210:8091'  // Si es localhost, usar IP remota
+    : `http://${window.location.hostname}:8091`;  // Si es remoto, usar hostname actual
 
   useEffect(() => {
     console.log('🚀 Dashboard useEffect ejecutado - SOLO debe ocurrir UNA VEZ al cargar');

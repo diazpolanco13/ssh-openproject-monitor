@@ -9,7 +9,10 @@ const GeographicalMap = () => {
 
   const fetchMapData = async () => {
     try {
-      const response = await axios.get('http://localhost:8091/api/map');
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? 'http://45.137.194.210:8091/api/map'
+        : `http://${window.location.hostname}:8091/api/map`;
+      const response = await axios.get(apiUrl);
       console.log('Map data received at:', new Date().toLocaleTimeString());
       setMapHtml(response.data.map_html || '');
     } catch (error) {

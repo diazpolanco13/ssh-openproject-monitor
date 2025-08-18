@@ -1,34 +1,34 @@
-# 🚀 SSH Monitor Dashboard - Migration Progress
+# 🚀 SSH Monitor Dashboard - Progreso de Migración
 
-## 📋 **Project Status: Foundation Complete**
+## 📋 **Estado del Proyecto: Base Completada**
 
-**Date**: August 17, 2025  
-**Branch**: `feature/react-frontend-migration-v1`  
-**Status**: ✅ **Backend + Frontend Connection Established**
+**Fecha**: 17 de Agosto, 2025  
+**Rama**: `feature/react-frontend-migration-v1`  
+**Estado**: ✅ **Conexión Backend + Frontend Establecida**
 
-## 🎯 **Current Achievement**
+## 🎯 **Logro Actual**
 
-We have successfully established a working foundation with:
+Hemos establecido exitosamente una base funcional con:
 
-### ✅ **Backend Flask APIs (Port 8091)**
-- **Status**: 100% Operational
-- **Architecture**: Converted from dual-purpose (HTML+API) to APIs-only
-- **Health Check**: `/api/health` endpoint responding correctly
-- **All Endpoints**: 5 API endpoints confirmed working
-- **Service**: SSH + OpenProject Monitor Backend v3.1
+### ✅ **APIs Backend Flask (Puerto 8091)**
+- **Estado**: 100% Operacional
+- **Arquitectura**: Convertido de dual-propósito (HTML+API) a solo-APIs
+- **Verificación de Salud**: Endpoint `/api/health` respondiendo correctamente
+- **Todos los Endpoints**: 5 endpoints API confirmados funcionando
+- **Servicio**: SSH + OpenProject Monitor Backend v3.1
 
-### ✅ **Frontend React (Port 3000)**
-- **Technology Stack**: React 18 + Vite 7.1.2 + Tailwind CSS 3.4.16
-- **Node.js**: Upgraded to v20.19.4 LTS
-- **npm**: Version 10.8.2
-- **Installation**: Clean manual setup (avoiding create-react-app issues)
-- **Access**: Both localhost:3000 and remote:45.137.194.210:3000 working
+### ✅ **Frontend React (Puerto 3000)**
+- **Stack Tecnológico**: React 18 + Vite 7.1.2 + Tailwind CSS 3.4.16
+- **Node.js**: Actualizado a v20.19.4 LTS
+- **npm**: Versión 10.8.2
+- **Instalación**: Configuración manual limpia (evitando problemas de create-react-app)
+- **Acceso**: Tanto localhost:3000 como remoto:45.137.194.210:3000 funcionando
 
-### ✅ **Connection Established**
-- **API Communication**: Frontend successfully connecting to backend
-- **Data Flow**: Real-time backend status and health check display
-- **Error Handling**: Proper error states and loading indicators
-- **CORS**: Configured and working
+### ✅ **Conexión Establecida**
+- **Comunicación API**: Frontend conectándose exitosamente al backend
+- **Flujo de Datos**: Visualización en tiempo real de estado del backend y verificación de salud
+- **Manejo de Errores**: Estados de error apropiados e indicadores de carga
+- **CORS**: Configurado y funcionando
 
 ## 🔧 **Technical Decisions Made**
 

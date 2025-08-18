@@ -2,7 +2,13 @@
 
 Sistema de monitoreo en tiempo real para seguridad SSH y actividad de usuarios OpenProject con arquitectura dual (Flask + React) - **Ahora con Modo Oscuro Completo**.
 
-## 🆕 Novedades v3.1
+## 🆕 Novedades v3.1.1 - MIGRACIÓN REACT EXITOSA
+
+### 🚀 **Frontend React Completamente Funcional**
+- **Migración exitosa**: Frontend React moderno con Vite + Tailwind CSS
+- **Conectividad inteligente**: URLs automáticas para desarrollo local y remoto
+- **90% migrado**: 8/10 componentes completamente funcionales
+- **Acceso dual**: Funciona desde localhost:3000 y 45.137.194.210:3000
 
 ### 🌙 **Modo Oscuro Completo**
 - **Toggle dinámico**: Interruptor animado en la esquina superior derecha
@@ -40,7 +46,7 @@ Sistema de monitoreo en tiempo real para seguridad SSH y actividad de usuarios O
 │              ┌────────▼────────┐                           │
 │              │  BACKEND FLASK  │                           │
 │              │  APIs RESTful   │                           │
-│              │   Puerto 8080   │                           │
+│              │   Puerto 8091   │ ⭐ MIGRACIÓN               │
 │              └────────┬────────┘                           │
 │                       │                                    │
 │     ┌─────────────────┼─────────────────┐                  │
@@ -377,9 +383,10 @@ cd frontend && npm start
 **Versión**: 3.1 (Agosto 2025) - **Con datos reales del servidor**
 
 ### 🌐 URLs de Acceso
-- **Dashboard React (Recomendado)**: http://45.137.194.210:3000/
+- **Dashboard React (Recomendado)**: http://45.137.194.210:3000/ ⭐ MIGRACIÓN
+- **Dashboard React Local**: http://localhost:3000/ ⭐ NUEVO
 - **Dashboard Flask (Legacy)**: http://45.137.194.210:8080/
-- **API Backend**: http://45.137.194.210:8080/api/
+- **API Backend**: http://45.137.194.210:8091/api/ ⭐ PUERTO MIGRACIÓN
 
 ---
 

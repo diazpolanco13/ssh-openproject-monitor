@@ -4,7 +4,10 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
 
-const API_BASE = 'http://localhost:8091'
+// Configuración inteligente de API URL
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://45.137.194.210:8091'  // Si es localhost, usar IP remota
+  : `http://${window.location.hostname}:8091`  // Si es remoto, usar hostname actual
 
 function AppContent() {
   const [backendConnected, setBackendConnected] = useState(false)

@@ -46,7 +46,10 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
     try {
       setLoading(true);
       
-      const response = await fetch('http://localhost:8091/api/server/status');
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? 'http://45.137.194.210:8091/api/server/status'
+        : `http://${window.location.hostname}:8091/api/server/status`;
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
