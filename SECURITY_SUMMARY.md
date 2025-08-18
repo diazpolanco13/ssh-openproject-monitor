@@ -78,44 +78,9 @@
 
 5. **Acceso Normal con IP Whitelisteada**
    - Tu IP: `142.111.25.137` (siempre permitida)
+   - Tu IP: `190.205.115.82` (siempre permitida)
 
----
 
-## 📊 DASHBOARD DE MONITOREO
-
-### Puertos y Acceso
-- **Puerto principal**: 8080
-- **Puerto alternativo**: 9999
-- **Acceso**: Solo desde tu IP (142.111.25.137)
-- **Script de reparación**: `/usr/local/bin/fix-dashboard-access.sh`
-
-### Datos Monitoreados
-- Ataques SSH en tiempo real
-- Conexiones exitosas
-- IPs bloqueadas por fail2ban
-- Estadísticas de OpenProject
-- Mapa mundial de ataques
-
----
-
-## 🔐 CONFIGURACIÓN SSH ENDURECIDA
-
-### Puertos SSH
-- **Puerto principal**: 22 (limitado)
-- **Puerto alternativo**: 2234 (recomendado)
-- **Puerto de emergencia**: 2235 (temporal)
-
-### Autenticación
-- **Claves públicas**: Preferida
-- **Contraseñas**: Solo para usuario de emergencia
-- **Root**: Solo con claves públicas
-
-### Banner Psicológico
-- **Ubicación**: `/etc/ssh/banner`
-- **Actualización**: Automática con estadísticas reales
-- **Efecto**: Disuade atacantes humanos
-
----
 
 ## 🚨 FAIL2BAN STATUS
 

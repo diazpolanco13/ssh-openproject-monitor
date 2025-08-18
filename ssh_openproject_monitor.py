@@ -7,7 +7,7 @@ import socket
 import psutil
 import shutil
 from datetime import datetime, timedelta
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import geoip2.database
 import folium
@@ -768,10 +768,11 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
                 location=[lat, lon],
                 radius=min(count * 2, 20),
                 popup=f"🔴 SSH Ataques desde {ip}<br>Total: {count}",
-                color='red',
+                color='#dc2626',
+                weight=2,
                 fill=True,
-                fillColor='red',
-                fillOpacity=0.6
+                fillColor='#ef4444',
+                fillOpacity=0.4  # Más translúcido
             ).add_to(m)
         
         # Add SSH successful connections (green circles)
@@ -783,17 +784,36 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
         
         for (lat, lon, ip), count in ssh_success_counts.items():
             is_trusted = ip in trusted_ips.get('ips', [])
-            color = 'blue' if is_trusted else 'green'
-            icon = '🔵' if is_trusted else '🟢'
+            is_admin = ip == '142.111.25.137'  # ⭐ Tu IP especial
+            
+            if is_admin:
+                color = '#6366f1'  # Indigo especial para admin
+                fillColor = '#8b5cf6'  # Violeta brillante
+                icon = '👑🔥'  # Icono especial de admin
+                radius = 10  # Más grande
+                popup_text = f"{icon} ADMIN SSH desde {ip}<br>🎯 Acceso Privilegiado"
+            elif is_trusted:
+                color = '#1d4ed8'
+                fillColor = '#3b82f6'
+                icon = '🔵'
+                radius = 8
+                popup_text = f"{icon} SSH Exitosa desde {ip}<br>(IP Confiable)"
+            else:
+                color = '#059669'
+                fillColor = '#10b981'
+                icon = '🟢'
+                radius = 8
+                popup_text = f"{icon} SSH Exitosa desde {ip}"
             
             folium.CircleMarker(
                 location=[lat, lon],
-                radius=8,
-                popup=f"{icon} SSH Exitosa desde {ip}<br>{'(IP Confiable)' if is_trusted else ''}",
+                radius=radius,
+                popup=popup_text,
                 color=color,
+                weight=3 if is_admin else 2,
                 fill=True,
-                fillColor=color,
-                fillOpacity=0.7
+                fillColor=fillColor,
+                fillOpacity=0.7 if is_admin else 0.5  # Admin más visible
             ).add_to(m)
         
         # Add OpenProject access markers (orange triangles)
@@ -813,24 +833,43 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
                 location=[lat, lon],
                 radius=6,
                 popup=f"{icon} OpenProject desde {ip}<br>Accesos: {count}<br>{'(IP Confiable)' if is_trusted else ''}",
-                color=color,
+                color='#7c3aed' if is_trusted else '#ea580c',
+                weight=2,
                 fill=True,
-                fillColor=color,
-                fillOpacity=0.8
+                fillColor='#8b5cf6' if is_trusted else '#f97316',
+                fillOpacity=0.5  # Más translúcido
             ).add_to(m)
         
-        # Add active SSH sessions (large blue circles)
+        # Add active SSH sessions (large circles)
         for session in active_ssh.get('network_connections', []):
             geo_info = get_geo_info(session['remote_ip'])
             if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                is_admin = session['remote_ip'] == '142.111.25.137'
+                
+                if is_admin:
+                    popup_text = f"👑🔥 ADMIN SSH ACTIVA desde {session['remote_ip']}<br>🎯 Sesión Privilegiada<br>Puerto: {session['remote_port']}"
+                    color = '#6366f1'
+                    fillColor = '#8b5cf6'
+                    radius = 15  # Más grande para admin
+                    weight = 4
+                    opacity = 0.8
+                else:
+                    popup_text = f"🔵 SSH Activa desde {session['remote_ip']}<br>{'(IP Confiable)' if session['is_trusted'] else ''}<br>Puerto: {session['remote_port']}"
+                    color = '#1e40af'
+                    fillColor = '#3b82f6'
+                    radius = 12
+                    weight = 3
+                    opacity = 0.6
+                
                 folium.CircleMarker(
                     location=[geo_info['lat'], geo_info['lon']],
-                    radius=12,
-                    popup=f"🔵 SSH Activa desde {session['remote_ip']}<br>{'(IP Confiable)' if session['is_trusted'] else ''}<br>Puerto: {session['remote_port']}",
-                    color='blue',
+                    radius=radius,
+                    popup=popup_text,
+                    color=color,
+                    weight=weight,
                     fill=True,
-                    fillColor='blue',
-                    fillOpacity=0.9
+                    fillColor=fillColor,
+                    fillOpacity=opacity
                 ).add_to(m)
         
         # Add active web connections (large purple circles)
@@ -841,10 +880,11 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
                     location=[geo_info['lat'], geo_info['lon']],
                     radius=10,
                     popup=f"🟣 {conn['protocol']} Activa desde {conn['remote_ip']}<br>{'(IP Confiable)' if conn['is_trusted'] else ''}<br>Puerto: {conn['remote_port']}",
-                    color='purple',
+                    color='#7c2d12',
+                    weight=2,
                     fill=True,
-                    fillColor='purple',
-                    fillOpacity=0.9
+                    fillColor='#a855f7',
+                    fillOpacity=0.5  # Más translúcido
                 ).add_to(m)
         
         return m._repr_html_()
@@ -1064,16 +1104,24 @@ def api_fail2ban():
 
 @app.route('/api/map')
 def api_map():
-    """API endpoint for the combined world map"""
+    """API endpoint for the combined world map with filtering support"""
     try:
+        # Get filter parameters
+        hide_params = request.args.getlist('hide')
+        
         ssh_entries = get_ssh_log_entries(24)
         op_entries, _ = get_openproject_logs(24)
         
-        ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack']
-        ssh_successful = [e for e in ssh_entries if e['type'] == 'success']
+        ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack'] if 'ssh_attacks' not in hide_params else []
+        ssh_successful = [e for e in ssh_entries if e['type'] == 'success'] if 'ssh_successful' not in hide_params else []
         
-        active_ssh = get_active_ssh_sessions()
-        active_web = get_active_web_connections()
+        # Active SSH incluido en ssh_successful (no filtro separado)
+        active_ssh = get_active_ssh_sessions() if 'ssh_successful' not in hide_params else {}
+        active_web = get_active_web_connections() if 'https' not in hide_params else []
+        
+        # Filter OpenProject if requested
+        if 'openproject' in hide_params:
+            op_entries = []
         
         map_html = create_combined_map(ssh_attacks, ssh_successful, op_entries, active_ssh, active_web)
         return jsonify({'map_html': map_html})
