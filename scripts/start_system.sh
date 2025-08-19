@@ -10,6 +10,12 @@ show_status() {
     echo ""
 }
 
+# Verificar si PM2 está instalado
+if ! command -v pm2 &> /dev/null; then
+    echo "📦 Instalando PM2..."
+    npm install -g pm2
+fi
+
 # 1. Iniciar Backend Flask
 echo "🔧 PASO 1: Iniciando Backend Flask (Puerto 8091)..."
 cd /opt/ssh-monitor
@@ -29,11 +35,19 @@ else
     exit 1
 fi
 
-# 2. Iniciar Frontend React
-echo "🎨 PASO 2: Iniciando Frontend React (Puerto 3000)..."
+# 2. Iniciar Frontend React con PM2
+echo "🎨 PASO 2: Iniciando Frontend React con PM2 (Puerto 3000)..."
 cd /opt/ssh-monitor/frontend-react
-nohup npm run dev > frontend.log 2>&1 &
-FRONTEND_PID=$!
+
+# Detener proceso anterior si existe
+pm2 delete react-app 2>/dev/null || true
+
+# Iniciar con PM2
+pm2 start npm --name "react-app" -- run dev
+
+# Configurar para que inicie automáticamente
+pm2 startup 2>/dev/null || true
+pm2 save
 
 # Esperar que el frontend esté listo
 echo "⏳ Esperando que el frontend esté listo..."
@@ -41,7 +55,9 @@ sleep 10
 
 # Verificar frontend
 if curl -s http://localhost:3000 > /dev/null; then
-    echo "✅ Frontend iniciado correctamente (PID: $FRONTEND_PID)"
+    echo "✅ Frontend iniciado correctamente con PM2"
+    echo "📱 PM2 Status:"
+    pm2 status
 else
     echo "❌ Error: Frontend no responde"
 fi
@@ -60,7 +76,9 @@ echo "   - API Backend: http://localhost:8091/api/"
 echo ""
 echo "🔍 Para monitorear logs:"
 echo "   - Backend: tail -f /opt/ssh-monitor/backend.log"
-echo "   - Frontend: tail -f /opt/ssh-monitor/frontend-react/frontend.log"
+echo "   - Frontend: pm2 logs react-app"
+echo "   - PM2 Status: pm2 status"
 
 echo ""
 echo "🛑 Para detener: ./scripts/stop_system.sh"
+echo "🔄 Para reiniciar React: pm2 restart react-app"

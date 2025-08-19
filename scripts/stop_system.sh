@@ -28,8 +28,15 @@ kill_by_port() {
     fi
 }
 
-# 1. Detener Frontend React (Puerto 3000)
-kill_by_port 3000 "Frontend React"
+# 1. Detener Frontend React (PM2)
+echo "🛑 PASO 1: Deteniendo Frontend React..."
+if command -v pm2 &> /dev/null; then
+    pm2 delete react-app 2>/dev/null || true
+    echo "✅ Frontend React detenido con PM2"
+else
+    echo "⚠️  PM2 no encontrado, deteniendo proceso manualmente..."
+    kill_by_port 3000 "Frontend React"
+fi
 
 # 2. Detener Backend Flask (Puerto 8091)
 kill_by_port 8091 "Backend Flask"
