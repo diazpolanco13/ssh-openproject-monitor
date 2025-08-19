@@ -26,7 +26,7 @@ fi
 
 echo ""
 echo "🔌 BACKEND API:"
-if curl -s http://localhost:8091/api/health > /dev/null; then
+if curl -s http://localhost:8091/api/server/status > /dev/null; then
     echo "   ✅ Puerto 8091: ACTIVO"
 else
     echo "   ❌ Puerto 8091: INACTIVO"

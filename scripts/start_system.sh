@@ -22,7 +22,7 @@ echo "⏳ Esperando que el backend esté listo..."
 sleep 5
 
 # Verificar backend
-if curl -s http://localhost:8091/api/health > /dev/null; then
+if curl -s http://localhost:8091/api/server/status > /dev/null; then
     echo "✅ Backend iniciado correctamente (PID: $BACKEND_PID)"
 else
     echo "❌ Error: Backend no responde"
@@ -32,7 +32,7 @@ fi
 # 2. Iniciar Frontend React
 echo "🎨 PASO 2: Iniciando Frontend React (Puerto 3000)..."
 cd /opt/ssh-monitor/frontend-react
-nohup npm start > frontend.log 2>&1 &
+nohup npm run dev > frontend.log 2>&1 &
 FRONTEND_PID=$!
 
 # Esperar que el frontend esté listo
@@ -54,7 +54,7 @@ show_status
 
 echo "📱 URLs de acceso:"
 echo "   - Dashboard React: http://localhost:3000"
-echo "   - Dashboard Flask: http://localhost:8080"
+echo "   - Dashboard Remoto: http://45.137.194.210:3000"
 echo "   - API Backend: http://localhost:8091/api/"
 
 echo ""
