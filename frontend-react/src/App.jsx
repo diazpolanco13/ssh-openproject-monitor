@@ -3,6 +3,7 @@ import axios from 'axios'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
+import Footer from './components/Footer'
 
 // Configuración inteligente de API URL
 const API_BASE = window.location.hostname === 'localhost' 
@@ -47,9 +48,9 @@ function AppContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200 flex flex-col">
         <Header />
-        <div className="p-8">
+        <div className="flex-1 p-8">
           <div className="max-w-6xl mx-auto">
             <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-400 p-4 mb-6">
               <div className="flex">
@@ -64,14 +65,18 @@ function AppContent() {
             </div>
           </div>
         </div>
+        <Footer />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200 flex flex-col">
       <Header />
-      <Dashboard />
+      <div className="flex-1">
+        <Dashboard />
+      </div>
+      <Footer />
     </div>
   )
 }

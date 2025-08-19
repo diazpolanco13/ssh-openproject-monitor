@@ -31,21 +31,21 @@ const MetricCard = ({ title, value, icon: Icon, color, subtitle }) => {
   const colors = colorClasses[color] || colorClasses.blue;
 
   return (
-    <div className={`${colors.bg} ${colors.border} border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+    <div className={`${colors.bg} ${colors.border} border rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow`}>
+      <div className="flex items-start justify-between">
+        <div className="min-w-0 flex-1 pr-3">
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">{title}</p>
           <div className="flex items-baseline">
-            <p className={`text-3xl font-semibold ${colors.text}`}>
+            <p className={`text-2xl sm:text-3xl font-semibold ${colors.text} truncate`}>
               {value.toLocaleString()}
             </p>
           </div>
           {subtitle && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{subtitle}</p>
           )}
         </div>
-        <div className={`p-3 rounded-full ${colors.bg}`}>
-          <Icon className={`h-6 w-6 ${colors.icon}`} />
+        <div className={`p-2 sm:p-3 rounded-full ${colors.bg} flex-shrink-0`}>
+          <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${colors.icon}`} />
         </div>
       </div>
     </div>

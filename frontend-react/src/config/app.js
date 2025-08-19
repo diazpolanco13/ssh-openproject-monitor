@@ -1,12 +1,12 @@
 // Configuración de la aplicación
 export const APP_CONFIG = {
   version: '3.1',
-  name: 'SSH & OpenProject Monitor',
-  subtitle: 'Sistema de Monitoreo y Seguridad',
+  name: 'SAE Dashboard',
+  subtitle: 'Análisis Estratégico',
   author: 'Carlos Diaz (@diazpolanco13)',
-  repository: 'ssh-openproject-monitor',
-  buildDate: '2025-08-17',
-  description: 'Dashboard de monitoreo en tiempo real para seguridad SSH y actividad de usuarios OpenProject'
+  repository: 'sae-security-dashboard',
+  buildDate: '2025-08-19',
+  description: 'Dashboard SAE para monitoreo de seguridad y análisis estratégico'
 };
 
 export default APP_CONFIG;

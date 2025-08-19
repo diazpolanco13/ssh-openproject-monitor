@@ -81,12 +81,12 @@ const GeographicalMap = () => {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors duration-200">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col space-y-3 mb-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
           Mapa Geográfico de Conexiones
         </h3>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-between sm:space-x-4">
           {/* Botón de actualizar */}
           <button
             onClick={handleRefresh}
@@ -94,22 +94,23 @@ const GeographicalMap = () => {
             className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-50 transition-colors duration-200"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Actualizar</span>
+            <span className="hidden sm:inline">Actualizar</span>
           </button>
           
-          {/* Filtros interactivos */}
-          <div className="flex items-center space-x-4 text-sm">
+          {/* Filtros interactivos - responsive */}
+          <div className="flex items-center space-x-2 sm:space-x-4 text-sm">
             {/* Ataques SSH */}
             <button
               onClick={() => toggleFilter('sshAttacks')}
-              className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-all duration-200 ${
+              className={`flex items-center space-x-2 px-2 sm:px-3 py-1 rounded-full transition-all duration-200 ${
                 filters.sshAttacks 
                   ? 'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-600' 
                   : 'bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 opacity-50'
               }`}
+              title="Ataques SSH"
             >
               <div className={`w-3 h-3 rounded-full ${filters.sshAttacks ? 'bg-red-500' : 'bg-gray-400'}`}></div>
-              <span className={`${filters.sshAttacks ? 'text-red-700 dark:text-red-300' : 'text-gray-500 dark:text-gray-400'}`}>
+              <span className={`hidden sm:inline ${filters.sshAttacks ? 'text-red-700 dark:text-red-300' : 'text-gray-500 dark:text-gray-400'}`}>
                 Ataques SSH
               </span>
             </button>
@@ -117,14 +118,15 @@ const GeographicalMap = () => {
             {/* SSH Exitoso */}
             <button
               onClick={() => toggleFilter('sshSuccessful')}
-              className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-all duration-200 ${
+              className={`flex items-center space-x-2 px-2 sm:px-3 py-1 rounded-full transition-all duration-200 ${
                 filters.sshSuccessful 
                   ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-600' 
                   : 'bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 opacity-50'
               }`}
+              title="SSH Exitoso"
             >
               <div className={`w-3 h-3 rounded-full ${filters.sshSuccessful ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-              <span className={`${filters.sshSuccessful ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'}`}>
+              <span className={`hidden sm:inline ${filters.sshSuccessful ? 'text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400'}`}>
                 SSH Exitoso
               </span>
             </button>
@@ -132,14 +134,15 @@ const GeographicalMap = () => {
             {/* OpenProject */}
             <button
               onClick={() => toggleFilter('openProject')}
-              className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-all duration-200 ${
+              className={`flex items-center space-x-2 px-2 sm:px-3 py-1 rounded-full transition-all duration-200 ${
                 filters.openProject 
                   ? 'bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-600' 
                   : 'bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 opacity-50'
               }`}
+              title="OpenProject"
             >
               <div className={`w-3 h-3 rounded-full ${filters.openProject ? 'bg-orange-500' : 'bg-gray-400'}`}></div>
-              <span className={`${filters.openProject ? 'text-orange-700 dark:text-orange-300' : 'text-gray-500 dark:text-gray-400'}`}>
+              <span className={`hidden sm:inline ${filters.openProject ? 'text-orange-700 dark:text-orange-300' : 'text-gray-500 dark:text-gray-400'}`}>
                 OpenProject
               </span>
             </button>
@@ -147,14 +150,15 @@ const GeographicalMap = () => {
             {/* HTTPS */}
             <button
               onClick={() => toggleFilter('https')}
-              className={`flex items-center space-x-2 px-3 py-1 rounded-full transition-all duration-200 ${
+              className={`flex items-center space-x-2 px-2 sm:px-3 py-1 rounded-full transition-all duration-200 ${
                 filters.https 
                   ? 'bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-600' 
                   : 'bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 opacity-50'
               }`}
+              title="HTTPS"
             >
               <div className={`w-3 h-3 rounded-full ${filters.https ? 'bg-purple-500' : 'bg-gray-400'}`}></div>
-              <span className={`${filters.https ? 'text-purple-700 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400'}`}>
+              <span className={`hidden sm:inline ${filters.https ? 'text-purple-700 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400'}`}>
                 HTTPS
               </span>
             </button>
