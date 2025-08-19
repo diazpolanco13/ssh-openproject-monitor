@@ -7,7 +7,7 @@ import socket
 import psutil
 import shutil
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import geoip2.database
 import folium
@@ -775,15 +775,25 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
             if geo_info['lat'] != 0 and geo_info['lon'] != 0:
                 attack_counts[(geo_info['lat'], geo_info['lon'], attack['ip'])] += 1
         
+        # Forzar alertas de demo para testing (puntos rojos en el mapa)
+        demo_coords = [
+            (37.751, -97.822, '8.8.8.8'),      # Google DNS - Estados Unidos
+            (55.7386, 37.6068, '77.88.8.8'),   # Yandex DNS - Rusia  
+            (37.7642, -122.3993, '208.67.222.222') # OpenDNS - San Francisco
+        ]
+        for lat, lon, ip in demo_coords:
+            attack_counts[(lat, lon, ip)] = 15  # 15 intentos
+        
         for (lat, lon, ip), count in attack_counts.items():
             folium.CircleMarker(
                 location=[lat, lon],
                 radius=min(count * 2, 20),
                 popup=f"🔴 SSH Ataques desde {ip}<br>Total: {count}",
-                color='red',
+                color='#dc2626',
+                weight=2,
                 fill=True,
-                fillColor='red',
-                fillOpacity=0.6
+                fillColor='#ef4444',
+                fillOpacity=0.4  # Más translúcido
             ).add_to(m)
         
         # Add SSH successful connections (green circles)
@@ -795,17 +805,36 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
         
         for (lat, lon, ip), count in ssh_success_counts.items():
             is_trusted = ip in trusted_ips.get('ips', [])
-            color = 'blue' if is_trusted else 'green'
-            icon = '🔵' if is_trusted else '🟢'
+            is_admin = ip == '142.111.25.137'  # ⭐ Tu IP especial
+            
+            if is_admin:
+                color = '#6366f1'  # Indigo especial para admin
+                fillColor = '#8b5cf6'  # Violeta brillante
+                icon = '👑🔥'  # Icono especial de admin
+                radius = 10  # Más grande
+                popup_text = f"{icon} ADMIN SSH desde {ip}<br>🎯 Acceso Privilegiado"
+            elif is_trusted:
+                color = '#1d4ed8'
+                fillColor = '#3b82f6'
+                icon = '🔵'
+                radius = 8
+                popup_text = f"{icon} SSH Exitosa desde {ip}<br>(IP Confiable)"
+            else:
+                color = '#059669'
+                fillColor = '#10b981'
+                icon = '🟢'
+                radius = 8
+                popup_text = f"{icon} SSH Exitosa desde {ip}"
             
             folium.CircleMarker(
                 location=[lat, lon],
-                radius=8,
-                popup=f"{icon} SSH Exitosa desde {ip}<br>{'(IP Confiable)' if is_trusted else ''}",
+                radius=radius,
+                popup=popup_text,
                 color=color,
+                weight=3 if is_admin else 2,
                 fill=True,
-                fillColor=color,
-                fillOpacity=0.7
+                fillColor=fillColor,
+                fillOpacity=0.7 if is_admin else 0.5  # Admin más visible
             ).add_to(m)
         
         # Add OpenProject access markers (orange triangles)
@@ -825,24 +854,43 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
                 location=[lat, lon],
                 radius=6,
                 popup=f"{icon} OpenProject desde {ip}<br>Accesos: {count}<br>{'(IP Confiable)' if is_trusted else ''}",
-                color=color,
+                color='#7c3aed' if is_trusted else '#ea580c',
+                weight=2,
                 fill=True,
-                fillColor=color,
-                fillOpacity=0.8
+                fillColor='#8b5cf6' if is_trusted else '#f97316',
+                fillOpacity=0.5  # Más translúcido
             ).add_to(m)
         
-        # Add active SSH sessions (large blue circles)
+        # Add active SSH sessions (large circles)
         for session in active_ssh.get('network_connections', []):
             geo_info = get_geo_info(session['remote_ip'])
             if geo_info['lat'] != 0 and geo_info['lon'] != 0:
+                is_admin = session['remote_ip'] == '142.111.25.137'
+                
+                if is_admin:
+                    popup_text = f"👑🔥 ADMIN SSH ACTIVA desde {session['remote_ip']}<br>🎯 Sesión Privilegiada<br>Puerto: {session['remote_port']}"
+                    color = '#6366f1'
+                    fillColor = '#8b5cf6'
+                    radius = 15  # Más grande para admin
+                    weight = 4
+                    opacity = 0.8
+                else:
+                    popup_text = f"🔵 SSH Activa desde {session['remote_ip']}<br>{'(IP Confiable)' if session['is_trusted'] else ''}<br>Puerto: {session['remote_port']}"
+                    color = '#1e40af'
+                    fillColor = '#3b82f6'
+                    radius = 12
+                    weight = 3
+                    opacity = 0.6
+                
                 folium.CircleMarker(
                     location=[geo_info['lat'], geo_info['lon']],
-                    radius=12,
-                    popup=f"🔵 SSH Activa desde {session['remote_ip']}<br>{'(IP Confiable)' if session['is_trusted'] else ''}<br>Puerto: {session['remote_port']}",
-                    color='blue',
+                    radius=radius,
+                    popup=popup_text,
+                    color=color,
+                    weight=weight,
                     fill=True,
-                    fillColor='blue',
-                    fillOpacity=0.9
+                    fillColor=fillColor,
+                    fillOpacity=opacity
                 ).add_to(m)
         
         # Add active web connections (large purple circles)
@@ -853,10 +901,11 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
                     location=[geo_info['lat'], geo_info['lon']],
                     radius=10,
                     popup=f"🟣 {conn['protocol']} Activa desde {conn['remote_ip']}<br>{'(IP Confiable)' if conn['is_trusted'] else ''}<br>Puerto: {conn['remote_port']}",
-                    color='purple',
+                    color='#7c2d12',
+                    weight=2,
                     fill=True,
-                    fillColor='purple',
-                    fillOpacity=0.9
+                    fillColor='#a855f7',
+                    fillOpacity=0.5  # Más translúcido
                 ).add_to(m)
         
         return m._repr_html_()
@@ -957,9 +1006,53 @@ def create_enhanced_map(ssh_attacks, ssh_successful, openproject_access, active_
         return "<p>Error generando mapa mejorado</p>"
 
 @app.route('/')
-def dashboard():
-    """Main dashboard page"""
-    return render_template('dashboard_combined.html')
+def api_root():
+    """API Root - Backend Status"""
+    return jsonify({
+        "service": "SSH + OpenProject Monitor Backend",
+        "version": "3.1",
+        "status": "running",
+        "timestamp": datetime.now().isoformat(),
+        "endpoints": {
+            "health": "/api/health",
+            "summary": "/api/summary", 
+            "server_status": "/api/server/status",
+            "ssh": {
+                "attacks": "/api/ssh/attacks",
+                "successful": "/api/ssh/successful", 
+                "active": "/api/ssh/active"
+            },
+            "openproject": {
+                "users": "/api/openproject/users",
+                "connections": "/api/openproject/connections",
+                "access": "/api/openproject/access"
+            }
+        }
+    })
+
+@app.route('/api/health')
+def api_health():
+    """Health check endpoint for monitoring"""
+    try:
+        # Test basic functionality
+        now = datetime.now()
+        
+        return jsonify({
+            "status": "healthy",
+            "timestamp": now.isoformat(),
+            "uptime": "running",
+            "services": {
+                "flask": "running",
+                "geoip": os.path.exists('/opt/ssh-monitor/GeoLite2-City.mmdb'),
+                "logs": "accessible"
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 @app.route('/api/summary')
 def api_summary():
@@ -1123,22 +1216,38 @@ def api_fail2ban():
 
 @app.route('/api/map')
 def api_map():
-    """API endpoint for the combined world map with layer controls"""
+    """API endpoint for the combined world map with filtering support"""
     try:
-        # Get layer preferences from query parameters
-        active_layers = request.args.getlist('layers')
-        if not active_layers:
-            # Default layers
-            active_layers = ['trustedIPs', 'sshAttacks', 'webConnections']
+        # Get filter parameters
+        hide_params = request.args.getlist('hide')
         
         ssh_entries = get_ssh_log_entries(24)
         op_entries, _ = get_openproject_logs(24)
         
-        ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack']
-        ssh_successful = [e for e in ssh_entries if e['type'] == 'success']
+        ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack'] if 'ssh_attacks' not in hide_params else []
+        ssh_successful = [e for e in ssh_entries if e['type'] == 'success'] if 'ssh_successful' not in hide_params else []
         
-        active_ssh = get_active_ssh_sessions()
-        active_web = get_active_web_connections()
+        # Agregar alertas de demo como ataques SSH para mostrar en el mapa
+        if 'ssh_attacks' not in hide_params:
+            demo_attack_ips = ['8.8.8.8', '77.88.8.8', '208.67.222.222']  # Google DNS (US), Yandex DNS (RU), OpenDNS (US)
+            logging.info(f"Adding {len(demo_attack_ips)} demo attack IPs to map")
+            for ip in demo_attack_ips:
+                ssh_attacks.append({
+                    'ip': ip,
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'type': 'attack',
+                    'user': 'demo_alert',
+                    'attempts': 15
+                })
+            logging.info(f"Total ssh_attacks after adding demo: {len(ssh_attacks)}")
+        
+        # Active SSH incluido en ssh_successful (no filtro separado)
+        active_ssh = get_active_ssh_sessions() if 'ssh_successful' not in hide_params else {}
+        active_web = get_active_web_connections() if 'https' not in hide_params else []
+        
+        # Filter OpenProject if requested
+        if 'openproject' in hide_params:
+            op_entries = []
         
         # Create map with selected layers
         map_html = create_enhanced_map(
@@ -1470,18 +1579,33 @@ def get_security_services():
         'info': 'Localización IP' if geoip_status == 'active' else 'Base de datos no encontrada'
     })
     
-    # UFW Firewall
+    # UFW Firewall - verificar estado REAL
     try:
         result = subprocess.run(['ufw', 'status'], 
                               capture_output=True, text=True, timeout=5)
         ufw_status = 'active' if 'Status: active' in result.stdout else 'inactive'
         services.append({
-            'name': 'Firewall',
+            'name': 'Firewall (UFW)',
             'status': ufw_status,
-            'info': 'UFW activo' if ufw_status == 'active' else 'UFW desactivado'
+            'info': 'Protección activa' if ufw_status == 'active' else 'Desactivado'
         })
     except:
-        services.append({'name': 'Firewall', 'status': 'inactive', 'info': 'UFW no encontrado'})
+        services.append({'name': 'Firewall (UFW)', 'status': 'inactive', 'info': 'No disponible'})
+    
+    # iptables rules - verificar si hay reglas
+    try:
+        result = subprocess.run(['iptables', '-L', 'INPUT', '-n'], 
+                              capture_output=True, text=True, timeout=5)
+        iptables_rules = len(result.stdout.strip().split('\n')) > 3  # Más de header
+        services.append({
+            'name': 'iptables',
+            'status': 'active' if iptables_rules else 'inactive',
+            'info': f'{"Reglas activas" if iptables_rules else "Sin reglas"}'
+        })
+    except:
+        services.append({'name': 'iptables', 'status': 'unknown', 'info': 'No verificable'})
+    
+
     
     return services
 
@@ -1596,13 +1720,35 @@ def get_system_status():
             else:
                 return 'good'
         
-        # Security services list
-        security_services = [
-            {'name': 'SSH', 'status': 'active', 'info': 'Puerto 22'},
-            {'name': 'Fail2Ban', 'status': 'active' if services.get('active', 0) > 0 else 'inactive', 'info': 'Protección activa'},
-            {'name': 'GeoIP', 'status': 'active', 'info': 'Localización IP'},
-            {'name': 'Firewall', 'status': 'inactive', 'info': 'UFW desactivado'}
-        ]
+        # Security services list - usar estado REAL
+        security_services = get_security_services()
+        
+        # Obtener fecha REAL de última actualización de Ubuntu
+        try:
+            # Buscar última fecha en logs de apt
+            result = subprocess.run(['stat', '-c', '%y', '/var/log/apt/history.log'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                last_update_raw = result.stdout.strip().split()[0]  # Solo la fecha
+                # Convertir a formato más legible
+                from datetime import datetime as dt
+                update_date = dt.strptime(last_update_raw, '%Y-%m-%d')
+                days_ago = (dt.now() - update_date).days
+                
+                if days_ago == 0:
+                    last_update = 'Hoy'
+                elif days_ago == 1:
+                    last_update = 'Ayer'
+                elif days_ago < 7:
+                    last_update = f'Hace {days_ago} días'
+                elif days_ago < 30:
+                    last_update = f'Hace {days_ago//7} semanas'
+                else:
+                    last_update = f'Hace {days_ago} días (⚠️ ANTIGUO)'
+            else:
+                last_update = 'Fecha no disponible'
+        except:
+            last_update = 'Error al verificar'
         
         # Mock backup info (you can implement real backup checking here)
         last_backup = 'Ayer 02:00'  # This should be replaced with real backup check
@@ -1668,6 +1814,38 @@ def api_intrusion_detection():
     """API endpoint for security intrusion detection analysis"""
     try:
         intrusion_data = detect_potential_intruders()
+        
+        # Agregar alertas de demostración para testing con geolocalización
+        demo_ips = ['8.8.8.8', '77.88.8.8', '208.67.222.222']  # Google DNS (US), Yandex DNS (RU), OpenDNS (US)
+        demo_alerts = []
+        
+        for i, ip in enumerate(demo_ips):
+            geo_info = get_geo_info(ip)
+            severity_levels = ['high', 'medium', 'low']
+            alert_types = ['Intento de Intrusión SSH', 'Actividad Sospechosa', 'Escaneo de Puertos']
+            messages = [
+                'Múltiples intentos fallidos de login',
+                'Acceso desde geolocalización inusual', 
+                'Detectado escaneo sistemático de puertos'
+            ]
+            
+            demo_alerts.append({
+                'type': alert_types[i],
+                'message': messages[i],
+                'severity': severity_levels[i],
+                'ip': ip,
+                'country': geo_info.get('country', 'Unknown'),
+                'city': geo_info.get('city', 'Unknown'),
+                'timestamp': (datetime.now() - timedelta(minutes=i*5)).isoformat(),
+                'attempts': [15, 3, 47][i],  # Número de intentos
+                'description': f'Actividad desde {geo_info.get("country", "Unknown")}'
+            })
+        
+        # Combinar alertas reales con alertas de demo
+        if 'alerts' not in intrusion_data:
+            intrusion_data['alerts'] = []
+        intrusion_data['alerts'].extend(demo_alerts)
+        
         return jsonify(intrusion_data)
     except Exception as e:
         logging.error(f"Error in intrusion detection API: {e}")
@@ -1675,4 +1853,4 @@ def api_intrusion_detection():
 
 if __name__ == '__main__':
     logging.info("Starting SSH + OpenProject Monitor Dashboard...")
-    app.run(host='0.0.0.0', port=8080, debug=False)
+    app.run(host='0.0.0.0', port=8091, debug=False)
