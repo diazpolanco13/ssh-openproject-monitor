@@ -20,9 +20,9 @@ const OpenProjectSection = ({ data, onRefresh }) => {
     setTimeout(() => setRefreshing(false), 500);
   }, [onRefresh]);
 
-  // Auto-actualización cada 30 segundos
+  // Auto-actualización cada 5 minutos
   useEffect(() => {
-    const interval = setInterval(() => handleRefresh(false), 30000);
+    const interval = setInterval(() => handleRefresh(false), 300000);
     return () => clearInterval(interval);
   }, [handleRefresh]);
 

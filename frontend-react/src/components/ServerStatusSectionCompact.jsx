@@ -78,7 +78,7 @@ const ServerStatusSectionCompact = ({ onRefresh }) => {
 
   useEffect(() => {
     fetchServerStatus(true); // Carga inicial con loading
-    const interval = setInterval(() => fetchServerStatus(false), 30000); // Actualizaciones sin loading
+    const interval = setInterval(() => fetchServerStatus(false), 300000); // Actualizaciones cada 5 minutos
     return () => clearInterval(interval);
   }, []);
 
