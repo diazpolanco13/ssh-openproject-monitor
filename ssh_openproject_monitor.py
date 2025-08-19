@@ -1227,19 +1227,8 @@ def api_map():
         ssh_attacks = [e for e in ssh_entries if e['type'] == 'attack'] if 'ssh_attacks' not in hide_params else []
         ssh_successful = [e for e in ssh_entries if e['type'] == 'success'] if 'ssh_successful' not in hide_params else []
         
-        # Agregar alertas de demo como ataques SSH para mostrar en el mapa
-        if 'ssh_attacks' not in hide_params:
-            demo_attack_ips = ['8.8.8.8', '77.88.8.8', '208.67.222.222']  # Google DNS (US), Yandex DNS (RU), OpenDNS (US)
-            logging.info(f"Adding {len(demo_attack_ips)} demo attack IPs to map")
-            for ip in demo_attack_ips:
-                ssh_attacks.append({
-                    'ip': ip,
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'type': 'attack',
-                    'user': 'demo_alert',
-                    'attempts': 15
-                })
-            logging.info(f"Total ssh_attacks after adding demo: {len(ssh_attacks)}")
+        # Log real attacks found
+        logging.info(f"SSH attacks found: {len(ssh_attacks)}, SSH successful: {len(ssh_successful)}")
         
         # Active SSH incluido en ssh_successful (no filtro separado)
         active_ssh = get_active_ssh_sessions() if 'ssh_successful' not in hide_params else {}
@@ -1250,9 +1239,9 @@ def api_map():
             op_entries = []
         
         # Create map with selected layers
-        map_html = create_enhanced_map(
+        map_html = create_combined_map(
             ssh_attacks, ssh_successful, op_entries, 
-            active_ssh, active_web, active_layers
+            active_ssh, active_web
         )
         return jsonify({'map_html': map_html})
     except Exception as e:
@@ -1815,36 +1804,9 @@ def api_intrusion_detection():
     try:
         intrusion_data = detect_potential_intruders()
         
-        # Agregar alertas de demostración para testing con geolocalización
-        demo_ips = ['8.8.8.8', '77.88.8.8', '208.67.222.222']  # Google DNS (US), Yandex DNS (RU), OpenDNS (US)
-        demo_alerts = []
-        
-        for i, ip in enumerate(demo_ips):
-            geo_info = get_geo_info(ip)
-            severity_levels = ['high', 'medium', 'low']
-            alert_types = ['Intento de Intrusión SSH', 'Actividad Sospechosa', 'Escaneo de Puertos']
-            messages = [
-                'Múltiples intentos fallidos de login',
-                'Acceso desde geolocalización inusual', 
-                'Detectado escaneo sistemático de puertos'
-            ]
-            
-            demo_alerts.append({
-                'type': alert_types[i],
-                'message': messages[i],
-                'severity': severity_levels[i],
-                'ip': ip,
-                'country': geo_info.get('country', 'Unknown'),
-                'city': geo_info.get('city', 'Unknown'),
-                'timestamp': (datetime.now() - timedelta(minutes=i*5)).isoformat(),
-                'attempts': [15, 3, 47][i],  # Número de intentos
-                'description': f'Actividad desde {geo_info.get("country", "Unknown")}'
-            })
-        
-        # Combinar alertas reales con alertas de demo
+        # Inicializar alertas reales si no existen
         if 'alerts' not in intrusion_data:
             intrusion_data['alerts'] = []
-        intrusion_data['alerts'].extend(demo_alerts)
         
         return jsonify(intrusion_data)
     except Exception as e:
