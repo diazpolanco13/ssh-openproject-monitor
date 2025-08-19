@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 import axios from 'axios';
 
@@ -40,11 +40,12 @@ const GeographicalMap = () => {
     }
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async (isManual = true) => {
     setRefreshing(true);
     await fetchMapData();
-    setTimeout(() => setRefreshing(false), 1000);
-  };
+    // Transición suave como en ServerStatus
+    setTimeout(() => setRefreshing(false), 500);
+  }, []);
 
   // Función para toggle de filtros
   const toggleFilter = (filterKey) => {
@@ -56,8 +57,13 @@ const GeographicalMap = () => {
 
   useEffect(() => {
     fetchMapData();
-    // Sin auto-actualización - solo carga inicial. Los datos geográficos son estables.
   }, []);
+
+  // Auto-actualización cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(() => handleRefresh(false), 30000);
+    return () => clearInterval(interval);
+  }, [handleRefresh]);
 
   // Recargar mapa cuando cambien los filtros
   useEffect(() => {
@@ -80,16 +86,24 @@ const GeographicalMap = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-colors duration-200">
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all duration-500 ${refreshing ? 'ring-2 ring-blue-300 dark:ring-blue-500' : ''}`}>
       <div className="flex flex-col space-y-3 mb-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-          Mapa Geográfico de Conexiones
-        </h3>
+        <div className="flex items-center space-x-2">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+            Mapa Geográfico de Conexiones
+          </h3>
+          {refreshing && (
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Actualizando...</span>
+            </div>
+          )}
+        </div>
         
         <div className="flex items-center justify-between sm:space-x-4">
           {/* Botón de actualizar */}
           <button
-            onClick={handleRefresh}
+            onClick={() => handleRefresh(true)}
             disabled={refreshing}
             className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-50 transition-colors duration-200"
           >

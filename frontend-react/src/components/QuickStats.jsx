@@ -1,8 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MetricCard from './MetricCard';
 import { Shield, Users, Activity, AlertTriangle } from 'lucide-react';
 
 const QuickStats = ({ sshData, openProjectData }) => {
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+
+  // Detectar cuando cambian los datos para mostrar efecto visual
+  useEffect(() => {
+    setRefreshing(true);
+    setLastUpdate(new Date());
+    const timer = setTimeout(() => setRefreshing(false), 500);
+    return () => clearTimeout(timer);
+  }, [sshData, openProjectData]);
+
   const metrics = [
     {
       title: "Ataques SSH",
@@ -44,7 +55,22 @@ const QuickStats = ({ sshData, openProjectData }) => {
 
   return (
     <div className="mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Indicador de actualización */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Métricas Principales</h2>
+        <div className="flex items-center space-x-2">
+          {refreshing && (
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Actualizando...</span>
+            </div>
+          )}
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            Actualizado: {lastUpdate.toLocaleTimeString()}
+          </span>
+        </div>
+      </div>
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 transition-all duration-500 ${refreshing ? 'ring-2 ring-blue-300 dark:ring-blue-500 rounded-lg p-2' : ''}`}>
         {metrics.map((metric, index) => (
           <MetricCard 
             key={index}

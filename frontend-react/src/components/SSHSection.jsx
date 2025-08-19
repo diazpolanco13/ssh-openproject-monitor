@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, RefreshCw, Lock, CheckCircle, User, Terminal, Clock, Globe } from 'lucide-react';
 
 const SSHSection = ({ data, onRefresh }) => {
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (isManual = true) => {
     setRefreshing(true);
     await onRefresh();
-    setTimeout(() => setRefreshing(false), 1000);
+    // Transición suave como en ServerStatus
+    setTimeout(() => setRefreshing(false), 500);
   };
 
+  // Auto-actualización cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(() => handleRefresh(false), 30000);
+    return () => clearInterval(interval);
+  }, [onRefresh]);
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-200">
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-500 ${refreshing ? 'ring-2 ring-blue-300 dark:ring-blue-500' : ''}`}>
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -19,9 +26,15 @@ const SSHSection = ({ data, onRefresh }) => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Monitoreo SSH 
             </h2>
+            {refreshing && (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Actualizando...</span>
+              </div>
+            )}
           </div>
           <button
-            onClick={handleRefresh}
+            onClick={() => handleRefresh(true)}
             disabled={refreshing}
             className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-50 transition-colors duration-200"
           >

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Database, UserCheck, UserX, RefreshCw, Activity, Globe } from 'lucide-react';
 
 const OpenProjectSection = ({ data, onRefresh }) => {
@@ -13,14 +13,21 @@ const OpenProjectSection = ({ data, onRefresh }) => {
     console.log('👥 Users from DB:', data.users.length, data.users.map(u => u.display_name));
   }
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async (isManual = true) => {
     setRefreshing(true);
     await onRefresh();
-    setTimeout(() => setRefreshing(false), 1000);
-  };
+    // Transición suave como en ServerStatus
+    setTimeout(() => setRefreshing(false), 500);
+  }, [onRefresh]);
+
+  // Auto-actualización cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(() => handleRefresh(false), 30000);
+    return () => clearInterval(interval);
+  }, [handleRefresh]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-200">
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-500 ${refreshing ? 'ring-2 ring-blue-300 dark:ring-blue-500' : ''}`}>
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -28,9 +35,15 @@ const OpenProjectSection = ({ data, onRefresh }) => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               OpenProject
             </h2>
+            {refreshing && (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Actualizando...</span>
+              </div>
+            )}
           </div>
           <button
-            onClick={handleRefresh}
+            onClick={() => handleRefresh(true)}
             disabled={refreshing}
             className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-50 transition-colors duration-200"
           >
@@ -107,7 +120,7 @@ const OpenProjectSection = ({ data, onRefresh }) => {
           <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Lista de Usuarios de OpenProject
           </h3>
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-96 overflow-y-auto transition-colors duration-200">
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-96 overflow-y-auto transition-colors duration-200 scrollbar-thick">
             {data.users && data.users.length > 0 ? (
               <div className="space-y-2">
                 {/* Ordenar usuarios: primero activos (por actividad más reciente), luego inactivos (por última conexión) */}
