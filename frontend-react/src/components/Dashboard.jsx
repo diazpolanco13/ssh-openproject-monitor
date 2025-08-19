@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 
+import QuickStats from './QuickStats';
 import ServerStatusSectionCompact from './ServerStatusSectionCompact';
 import SSHSection from './SSHSection';
 import OpenProjectSection from './OpenProjectSection';
