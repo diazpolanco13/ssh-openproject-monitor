@@ -775,14 +775,8 @@ def create_combined_map(ssh_attacks, ssh_successful, openproject_access, active_
             if geo_info['lat'] != 0 and geo_info['lon'] != 0:
                 attack_counts[(geo_info['lat'], geo_info['lon'], attack['ip'])] += 1
         
-        # Forzar alertas de demo para testing (puntos rojos en el mapa)
-        demo_coords = [
-            (37.751, -97.822, '8.8.8.8'),      # Google DNS - Estados Unidos
-            (55.7386, 37.6068, '77.88.8.8'),   # Yandex DNS - Rusia  
-            (37.7642, -122.3993, '208.67.222.222') # OpenDNS - San Francisco
-        ]
-        for lat, lon, ip in demo_coords:
-            attack_counts[(lat, lon, ip)] = 15  # 15 intentos
+        # Log real attacks found for debugging
+        logging.info(f"Processing {len(ssh_attacks)} SSH attacks for map visualization")
         
         for (lat, lon, ip), count in attack_counts.items():
             folium.CircleMarker(
